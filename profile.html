@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录管理</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(45, 117, 255, .12), transparent 30%),
+        radial-gradient(circle at 82% 12%, rgba(32, 199, 190, .12), transparent 28%),
+        linear-gradient(145deg, #f7fbff, #e2f0ff);
+      color: #071a3d;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .login-shell {
+      width: min(92vw, 460px);
+      padding: 30px;
+      border-radius: 18px;
+      border: 1px solid rgba(80, 132, 220, 0.18);
+      background: rgba(255, 255, 255, 0.84);
+      box-shadow: 0 26px 70px rgba(34, 93, 178, 0.18);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      margin-bottom: 26px;
+    }
+    .brand-logo {
+      width: 190px;
+      height: 50px;
+      object-fit: contain;
+      display: block;
+    }
+    h1 {
+      margin: 0;
+      color: #092253;
+      font-size: 28px;
+      font-weight: 950;
+    }
+    .sub {
+      margin: 10px 0 24px;
+      color: #617293;
+      font-size: 14px;
+      font-weight: 750;
+      line-height: 1.7;
+    }
+    form {
+      display: grid;
+      gap: 14px;
+    }
+    label {
+      display: grid;
+      gap: 8px;
+      color: #31466e;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    input {
+      width: 100%;
+      height: 44px;
+      padding: 0 13px;
+      border-radius: 9px;
+      border: 1px solid rgba(72, 128, 224, 0.18);
+      background: rgba(255, 255, 255, 0.86);
+      color: #17325e;
+      font-size: 14px;
+      font-weight: 800;
+      outline: none;
+    }
+    .login-btn {
+      height: 44px;
+      margin-top: 6px;
+      border: 0;
+      border-radius: 9px;
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #006dff);
+      font-size: 15px;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 12px 26px rgba(19, 120, 255, 0.22);
+    }
+    .message {
+      min-height: 18px;
+      color: #e04444;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .message.success { color: #0aa97b; }
+    .meta {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 10px;
+      color: #40577d;
+      background: rgba(239, 246, 255, 0.78);
+      border: 1px solid rgba(72, 128, 224, 0.12);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <main class="login-shell">
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
+    </div>
+    <h1>登录管理</h1>
+    <p class="sub">请输入账号密码进入知识库中台。管理员可查看全部内容，普通用户仅查看自己上传的文件。</p>
+    <form id="loginForm">
+      <label>
+        用户名
+        <input id="account" autocomplete="username" placeholder="请输入用户名" />
+      </label>
+      <label>
+        密码
+        <input id="password" autocomplete="current-password" type="password" placeholder="请输入密码" />
+      </label>
+      <div class="message" id="message"></div>
+      <button class="login-btn" type="submit">登录</button>
+    </form>
+    <div class="meta">当前已配置账号：管理员 admin；用户 刘耀光。</div>
+  </main>
+
+  <script>
+    localStorage.removeItem("adminToken");
+
+    document.getElementById("loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = document.getElementById("message");
+      message.className = "message";
+      message.textContent = "";
+      try {
+        const response = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            account: document.getElementById("account").value.trim(),
+            password: document.getElementById("password").value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          message.textContent = data.error || "登录失败";
+          return;
+        }
+        localStorage.setItem("currentUser", data.user.name);
+        localStorage.setItem("sessionToken", data.user.sessionToken);
+        message.className = "message success";
+        message.textContent = "登录成功";
+        location.href = "overview.html";
+      } catch (error) {
+        message.textContent = "登录接口暂时不可用";
+        console.warn("Login failed", error);
+      }
+    });
+  </script>
+</body>
+</html>

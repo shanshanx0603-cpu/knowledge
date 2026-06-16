@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文档知识库</title>
+  <style>
+    :root {
+      --ink: #071a3d;
+      --muted: #617293;
+      --blue: #1378ff;
+      --line: rgba(76, 121, 190, 0.16);
+      --green: #20bfa4;
+      --red: #ff3b30;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(36, 130, 255, 0.08), transparent 24%),
+        radial-gradient(circle at 92% 12%, rgba(36, 130, 255, 0.08), transparent 26%),
+        linear-gradient(145deg, #f8fbff 0%, #eef6ff 48%, #f7fbff 100%);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    .page {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: clamp(48px, 8.8vh, 72px) 1fr;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 170px 1fr 150px;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(72, 111, 172, 0.12);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .brand-logo {
+      width: 136px;
+      height: 36px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .title {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 13px;
+      margin: 0;
+      font-size: 21px;
+      font-weight: 900;
+      color: #092253;
+    }
+
+    .title::before,
+    .title::after {
+      content: "";
+      width: 54px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(45, 117, 255, 0.35));
+    }
+
+    .title::after {
+      background: linear-gradient(90deg, rgba(45, 117, 255, 0.35), transparent);
+    }
+
+    .title span {
+      position: relative;
+    }
+
+    .title span::before,
+    .title span::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #2f8bff;
+      box-shadow: 7px 0 0 #7bb7ff;
+    }
+
+    .title span::before { left: -34px; }
+    .title span::after { right: -24px; }
+
+    .user {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 29px;
+      padding: 3px 10px 3px 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(49, 96, 166, 0.12);
+      box-shadow: 0 5px 18px rgba(44, 85, 147, 0.10);
+      color: #4d5d78;
+      text-decoration: none;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 32%, #ffdfc6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 86%, #20365c 0 35%, transparent 36%),
+        linear-gradient(#e8f0ff, #c4d8ff);
+    }
+
+    .chev {
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid #7c8ba3;
+      border-bottom: 1.5px solid #7c8ba3;
+      transform: rotate(45deg) translateY(-2px);
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 22px;
+      padding: 20px 28px 22px 16px;
+    }
+
+    .side {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: 20px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(81, 130, 207, 0.14);
+      box-shadow: 0 18px 48px rgba(38, 95, 180, 0.08);
+    }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .nav a,
+    .upload {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 14px;
+      border-radius: 8px;
+      color: #233b70;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .nav a.active {
+      color: #0069ff;
+      background: linear-gradient(90deg, rgba(0, 111, 255, 0.14), rgba(0, 111, 255, 0.04));
+      box-shadow: inset 3px 0 0 #0b72ff;
+    }
+
+    .nav svg,
+    .upload svg {
+      flex: 0 0 auto;
+      width: 23px;
+      height: 23px;
+    }
+
+    .upload {
+      border-top: 1px solid rgba(68, 109, 178, 0.14);
+      border-radius: 0;
+      padding-top: 18px;
+      color: #19376f;
+    }
+
+    .main {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 44px minmax(220px, 28vh) 42px minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .table-wrap {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .table-wrap thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: rgba(244, 248, 255, 0.96);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(360px, 48vw);
+      align-items: center;
+      gap: 20px;
+    }
+
+    .crumb {
+      color: #28416f;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .search {
+      height: 44px;
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      align-items: center;
+      border: 1px solid rgba(39, 101, 195, 0.20);
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.70);
+      overflow: hidden;
+    }
+
+    .search input {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: none;
+      padding: 0 20px;
+      color: #17325e;
+      background: transparent;
+      font-size: 16px;
+    }
+
+    .search input::placeholder { color: #7c93bf; }
+    .search svg { justify-self: center; width: 26px; height: 26px; color: #0a2758; }
+
+    .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: clamp(145px, 13vw, 188px) minmax(0, 1fr);
+      grid-template-rows: minmax(128px, 1fr) 58px;
+      align-items: stretch;
+      min-height: 0;
+      column-gap: clamp(16px, 1.8vw, 28px);
+      row-gap: 10px;
+      padding: 18px 28px 16px;
+      border-radius: 12px;
+      background:
+        linear-gradient(110deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.62)),
+        radial-gradient(circle at 96% 44%, rgba(48, 137, 255, 0.18), transparent 30%);
+      border: 1px solid rgba(86, 136, 213, 0.16);
+      box-shadow: 0 18px 48px rgba(40, 100, 188, 0.12);
+      overflow: hidden;
+    }
+
+    .doc-art {
+      position: relative;
+      width: clamp(132px, 11vw, 168px);
+      height: clamp(116px, 15vh, 150px);
+      justify-self: center;
+      align-self: center;
+      grid-row: 1 / 3;
+    }
+
+    .doc-art::before {
+      content: "";
+      position: absolute;
+      inset: auto 0 2px;
+      height: 46px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.96), rgba(64, 136, 255, 0.20) 56%, transparent 57%);
+    }
+
+    .sheet {
+      position: absolute;
+      width: 58%;
+      height: 68%;
+      border-radius: 8px;
+      background: linear-gradient(155deg, rgba(255, 255, 255, 0.86), rgba(73, 145, 255, 0.24));
+      border: 1px solid rgba(66, 131, 255, 0.38);
+      box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.72), 0 16px 24px rgba(48, 110, 213, 0.14);
+      transform: skewY(-8deg);
+    }
+
+    .sheet:nth-child(1) { left: 31%; top: 11%; opacity: .62; }
+    .sheet:nth-child(2) { left: 42%; top: 7%; opacity: .76; }
+    .sheet:nth-child(3) { left: 53%; top: 3%; }
+    .sheet:nth-child(4) { left: 10%; top: 32%; }
+
+    .sheet::before,
+    .sheet::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      height: 7px;
+      border-radius: 99px;
+      background: rgba(34, 118, 255, 0.44);
+    }
+
+    .sheet::before { top: 28px; width: 34px; }
+    .sheet::after { top: 46px; width: 44px; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      border-radius: 12px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02));
+    }
+
+    .metric {
+      height: 100%;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      padding: 0 clamp(14px, 1.35vw, 22px);
+      border-left: 1px solid rgba(79, 121, 190, 0.15);
+      min-width: 0;
+    }
+
+    .metric:first-child { border-left: 0; }
+    .metric:last-child {
+      padding-right: clamp(10px, 1.1vw, 18px);
+    }
+
+    .metric-label {
+      color: #31466e;
+      font-size: clamp(14px, 1vw, 16px);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .metric-value {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      color: #001943;
+      font-size: clamp(34px, 3vw, 48px);
+      font-weight: 950;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .metric-value small { font-size: clamp(16px, 1.35vw, 22px); font-weight: 800; }
+    .metric-note { color: #4a5e82; font-size: clamp(12px, .85vw, 14px); font-weight: 800; white-space: nowrap; }
+    .up { color: #16bd86; margin-left: 4px; }
+
+    .ring {
+      position: relative;
+      width: clamp(58px, 5vw, 72px);
+      height: clamp(58px, 5vw, 72px);
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: conic-gradient(#1975ff 94%, #e5eefc 0);
+    }
+
+    .ring::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 64%;
+      height: 64%;
+      border-radius: 50%;
+      background: white;
+      transform: translate(-50%, -50%);
+    }
+
+    .ring-wrap { display: flex; align-items: center; gap: clamp(10px, 1vw, 16px); }
+    .store-line { width: min(150px, 100%); height: 6px; border-radius: 99px; background: #e0e9f7; overflow: hidden; }
+    .store-line span { display: block; width: 64%; height: 100%; background: #1c6fff; border-radius: inherit; }
+
+    .flow {
+      height: 58px;
+      display: grid;
+      grid-column: 2;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: center;
+      gap: 0;
+      color: #30466f;
+      font-size: clamp(12px, .86vw, 13px);
+      font-weight: 800;
+      padding: 0 clamp(6px, 1vw, 16px);
+      border-top: 1px solid rgba(77, 130, 210, 0.12);
+    }
+
+    .step {
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      position: relative;
+      min-width: 0;
+    }
+
+    .step span {
+      white-space: nowrap;
+    }
+
+    .step:last-child {
+      align-self: center;
+      margin-top: 4px;
+    }
+
+    .step.done {
+      grid-template-rows: 36px auto;
+      align-content: center;
+      justify-items: center;
+      gap: 5px;
+      margin-top: 0;
+    }
+
+    .step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: calc(50% + 25px);
+      right: calc(-50% + 25px);
+      top: 18px;
+      width: auto;
+      height: 1px;
+      background: #44a4ff;
+      z-index: 0;
+    }
+
+    .step-icon {
+      position: relative;
+      z-index: 1;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #318eff;
+      background: radial-gradient(circle, rgba(255,255,255,.98), rgba(123, 190, 255, .28));
+      border: 1px solid rgba(58, 138, 236, .18);
+    }
+
+    .cube {
+      position: relative;
+      z-index: 1;
+      width: 54px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(145deg, rgba(73, 167, 255, .82), rgba(17, 103, 240, .48));
+      border: 1px solid rgba(73, 140, 240, .36);
+      box-shadow: inset 0 0 22px rgba(255,255,255,.5), 0 18px 30px rgba(38, 110, 218, .16);
+    }
+
+    .ok-dot {
+      position: absolute;
+      left: 50%;
+      top: 5px;
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: white;
+      background: linear-gradient(145deg, #35d9ba, #16c88a);
+      font-size: 18px;
+      z-index: 2;
+      transform: translateX(-50%);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .tab {
+      height: 40px;
+      min-width: 116px;
+      padding: 0 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(69, 121, 208, 0.16);
+      background: rgba(255, 255, 255, 0.66);
+      color: #344873;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: linear-gradient(145deg, #0791ff, #006dff);
+      box-shadow: 0 8px 18px rgba(8, 121, 255, 0.24);
+    }
+
+    .actions { display: flex; gap: 14px; }
+    .tool-btn {
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(76, 121, 203, 0.14);
+      color: #0062ff;
+      background: rgba(255,255,255,.68);
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .tool-btn:hover {
+      background: rgba(235, 244, 255, .92);
+      border-color: rgba(28, 111, 255, .28);
+    }
+
+    .table-card {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 54px;
+      border-radius: 10px;
+      border: 1px solid rgba(72, 122, 198, 0.14);
+      background: rgba(255, 255, 255, 0.70);
+      box-shadow: 0 18px 48px rgba(38, 95, 180, 0.08);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: clamp(12px, 0.92vw, 14px);
+    }
+
+    thead {
+      height: 46px;
+      color: #152849;
+      background: rgba(244, 248, 255, 0.84);
+    }
+
+    th, td {
+      padding: 0 8px;
+      height: 46px;
+      vertical-align: middle;
+      text-align: left;
+      border-bottom: 1px solid rgba(69, 112, 176, 0.10);
+      color: #20385f;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    th:first-child, td:first-child { width: 4%; text-align: center; }
+    th:nth-child(2), td:nth-child(2) { width: 24%; }
+    th:nth-child(n+3), td:nth-child(n+3) { width: 10.285%; text-align: center; }
+
+    th {
+      font-weight: 950;
+      color: #142b57;
+    }
+
+    input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: #0b78ff;
+    }
+
+    .file {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-weight: 800;
+    }
+
+    .file span:last-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-icon {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 4px;
+      color: white;
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .pdf { background: #f13c22; }
+    .docx { background: #166dff; }
+    .pptx { background: #ff7a00; }
+    .video { background: #14b8a6; }
+    .image { background: #6478ff; }
+
+    .owner {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mini-avatar {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 31%, #ffe0c6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 82%, #20365c 0 35%, transparent 36%),
+        linear-gradient(#eaf2ff, #bdd5ff);
+    }
+
+    .tag,
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 64px;
+      justify-content: center;
+      height: 25px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 900;
+      background: #eef5ff;
+      color: #126cff;
+      max-width: 100%;
+      vertical-align: middle;
+    }
+
+    td:nth-child(6) .tag,
+    td:nth-child(7) .status {
+      margin-inline: auto;
+    }
+
+    .tag.green { color: #009d80; background: #e8faf4; }
+    .tag.purple { color: #7f4dff; background: #f2ecff; }
+    .tag.orange { color: #ff6b00; background: #fff0e5; }
+    .tag.cyan { color: #0099b8; background: #e8faff; }
+
+    .status.indexed { color: #12a887; background: #e8faf4; }
+    .status.indexing { color: #126cff; background: #edf4ff; }
+    .status.failed { color: #f13c33; background: #fff0f0; }
+    .status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .op {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      color: #0068ff;
+      font-size: 18px;
+      font-weight: 950;
+    }
+
+    .op-btn {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 6px;
+      color: #0068ff;
+      background: transparent;
+      font: inherit;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .op-btn:hover {
+      background: rgba(0, 104, 255, .10);
+    }
+
+    .toast {
+      position: fixed;
+      right: 28px;
+      bottom: 28px;
+      z-index: 20;
+      max-width: 360px;
+      padding: 12px 16px;
+      border-radius: 9px;
+      color: #16315d;
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid rgba(63, 121, 213, .20);
+      box-shadow: 0 16px 36px rgba(34, 89, 172, .16);
+      font-size: 14px;
+      font-weight: 850;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: .18s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .filter-popover {
+      position: fixed;
+      z-index: 15;
+      display: none;
+      min-width: 178px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(63, 121, 213, .18);
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 18px 42px rgba(34, 89, 172, .16);
+    }
+
+    .filter-popover.show {
+      display: grid;
+      gap: 8px;
+    }
+
+    .filter-popover button {
+      height: 34px;
+      border: 0;
+      border-radius: 7px;
+      color: #20385f;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 850;
+      text-align: left;
+      cursor: pointer;
+      padding: 0 10px;
+    }
+
+    .filter-popover button:hover {
+      color: #0068ff;
+      background: #edf5ff;
+    }
+
+    .pager {
+      display: grid;
+      grid-template-columns: 1fr auto 130px;
+      align-items: center;
+      padding: 0 14px 0 18px;
+      color: #2f4772;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .pages {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .page-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      border: 1px solid rgba(58, 115, 205, 0.16);
+      display: grid;
+      place-items: center;
+      color: #142b57;
+      background: rgba(255, 255, 255, 0.72);
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .page-btn.active {
+      color: white;
+      background: linear-gradient(145deg, #0b8dff, #006cff);
+    }
+
+    .page-btn.disabled {
+      color: #a7b5cc;
+      background: rgba(255, 255, 255, 0.46);
+      cursor: not-allowed;
+    }
+
+    .page-ellipsis {
+      min-width: 18px;
+      text-align: center;
+      color: #7c8eac;
+      font-weight: 900;
+    }
+
+    .page-size {
+      justify-self: end;
+      height: 34px;
+      min-width: 112px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      border: 1px solid rgba(58, 115, 205, 0.14);
+      background: rgba(255, 255, 255, 0.68);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .page { min-width: 1180px; min-height: 760px; }
+      .workspace { grid-template-columns: 190px 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <a class="brand" href="knowledge-dashboard.html">
+        <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
+      </a>
+      <h1 class="title"><span>知识库中台</span></h1>
+      <a class="user" href="profile.html">
+        <span class="avatar"></span>
+        <span id="currentUserName">个人中心</span>
+        <span class="chev"></span>
+      </a>
+    </header>
+
+    <section class="workspace">
+      <aside class="side">
+        <nav class="nav">
+          <a href="overview.html">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" stroke="currentColor" stroke-width="2"/></svg>
+            全部概览
+          </a>
+          <a data-nav-type="documents" class="active" href="detail.html?type=documents">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6V3Z" fill="currentColor"/><path d="M9 11h6M9 15h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+            文档知识库
+          </a>
+          <a data-nav-type="videos" href="detail.html?type=videos">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m10 9 5 3-5 3V9Z" fill="currentColor"/></svg>
+            视频知识库
+          </a>
+          <a data-nav-type="images" href="detail.html?type=images">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m7 17 4-5 3 3.5 2-2.5 2 4H7Z" fill="currentColor"/></svg>
+            图片知识库
+          </a>
+        </nav>
+        <a class="upload" href="upload.html">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 5 5m-5-5-5 5M5 16v4h14v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          上传文件
+        </a>
+      </aside>
+
+      <section class="main">
+        <div class="toolbar">
+          <div class="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;知识库管理</div>
+          <label class="search">
+            <input id="searchInput" type="search" placeholder="搜索知识库、文件、分类" />
+            <svg viewBox="0 0 24 24" fill="none"><path d="m21 21-4.6-4.6M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </label>
+        </div>
+
+        <section class="hero">
+          <div class="doc-art" aria-hidden="true">
+            <span class="sheet"></span>
+            <span class="sheet"></span>
+            <span class="sheet"></span>
+            <span class="sheet"></span>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-label" id="totalLabel">文档总数</div>
+              <div class="metric-value"><span id="docCount">8,462</span><span class="up">↑</span></div>
+              <div class="metric-note">较昨日 <span class="up">+532</span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">已索引</div>
+              <div class="ring-wrap"><div class="metric-value"><span id="indexedRate">94</span><small>%</small></div><div class="ring"></div></div>
+              <div class="metric-note">较昨日 <span class="up">+2%</span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">存储空间</div>
+              <div class="metric-value"><span id="storage">128.7</span><small>GB</small></div>
+              <div class="metric-note">已使用 <span id="storageNote">128.7 GB / 200 GB</span></div>
+              <div class="store-line"><span></span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">今日更新</div>
+              <div class="metric-value"><span id="todayUpdated">32</span></div>
+              <div class="metric-note">较昨日 <span class="up">+6</span></div>
+            </div>
+          </div>
+          <div class="flow">
+            <div class="step"><div class="step-icon" id="parseIcon">▤</div><span id="parseStep">文档解析</span></div>
+            <div class="step"><div class="step-icon">◇</div><span>索引构建</span></div>
+            <div class="step"><div class="step-icon">◴</div><span>内容入库</span></div>
+            <div class="step done"><div class="cube"></div><span class="ok-dot">✓</span><span>完成入库</span></div>
+          </div>
+        </section>
+
+        <section class="filters">
+          <div class="tabs">
+            <button class="tab active" data-filter="all">全部 <span id="allCount">(8,462)</span></button>
+            <button class="tab" data-filter="indexed">已索引 <span id="indexedCount">(7,982)</span></button>
+            <button class="tab" data-filter="indexing">索引中 <span id="indexingCount">(314)</span></button>
+            <button class="tab" data-filter="failed">失败 <span id="failedCount">(166)</span></button>
+          </div>
+          <div class="actions">
+            <button class="tool-btn" id="filterBtn" type="button">▽ 筛选</button>
+          </div>
+        </section>
+
+        <section class="table-card">
+          <div class="table-wrap">
+            <table>
+              <colgroup>
+                <col style="width:4%" />
+                <col style="width:24%" />
+                <col style="width:10.285%" />
+                <col style="width:10.285%" />
+                <col style="width:10.285%" />
+                <col style="width:10.285%" />
+                <col style="width:10.285%" />
+                <col style="width:10.285%" />
+                <col style="width:10.285%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th><input type="checkbox" /></th>
+                  <th id="nameHeader">文档名称</th>
+                  <th>类型</th>
+                  <th>大小</th>
+                  <th>负责人</th>
+                  <th>分类</th>
+                  <th>索引状态</th>
+                  <th>更新时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="docRows"></tbody>
+            </table>
+          </div>
+          <div class="pager">
+            <div>共 <span id="totalText">8,462</span> 条</div>
+            <div class="pages" id="pagerPages"></div>
+            <button class="page-size" id="pageSizeBtn" type="button">20 条/页⌄</button>
+          </div>
+        </section>
+      </section>
+    </section>
+    <div class="filter-popover" id="filterPopover">
+      <button type="button" data-filter-shortcut="all">全部文件</button>
+      <button type="button" data-filter-shortcut="indexed">只看已索引</button>
+      <button type="button" data-filter-shortcut="indexing">只看索引中</button>
+      <button type="button" data-filter-shortcut="failed">只看失败</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const type = params.get("type") || "documents";
+    let currentUser = localStorage.getItem("currentUser") || "";
+    if (!currentUser || !localStorage.getItem("sessionToken")) {
+      currentUser = "";
+    }
+    const state = { resources: [], filter: "all", page: 1, pageSize: 20 };
+    const currentUserName = document.getElementById("currentUserName");
+    if (currentUserName) currentUserName.textContent = currentUser || "登录";
+
+    function apiUrl(path) {
+      const separator = path.includes("?") ? "&" : "?";
+      const token = localStorage.getItem("sessionToken") || "";
+      if (!currentUser || !token) {
+        location.href = "profile.html";
+        return path;
+      }
+      return `${path}${separator}user=${encodeURIComponent(currentUser)}&token=${encodeURIComponent(token)}`;
+    }
+
+    const pageConfig = {
+      documents: {
+        title: "文档知识库",
+        totalLabel: "文档总数",
+        nameHeader: "文档名称",
+        parseStep: "文档解析",
+        parseIcon: "▤",
+        placeholder: "搜索知识库、文件、分类",
+        defaultTotal: 8462,
+        defaultStorage: 128.7,
+        defaultProgress: 94,
+        indexingCount: 314,
+        failedCount: 166
+      },
+      videos: {
+        title: "视频知识库",
+        totalLabel: "视频总数",
+        nameHeader: "视频名称",
+        parseStep: "视频解析",
+        parseIcon: "▶",
+        placeholder: "搜索视频知识库、视频、分类",
+        defaultTotal: 326,
+        defaultStorage: 256.4,
+        defaultProgress: 97,
+        indexingCount: 18,
+        failedCount: 5
+      },
+      images: {
+        title: "图片知识库",
+        totalLabel: "图片总数",
+        nameHeader: "图片名称",
+        parseStep: "图片解析",
+        parseIcon: "▧",
+        placeholder: "搜索图片知识库、图片、分类",
+        defaultTotal: 1284,
+        defaultStorage: 96.3,
+        defaultProgress: 92,
+        indexingCount: 45,
+        failedCount: 12
+      }
+    };
+
+    const config = pageConfig[type] || pageConfig.documents;
+
+    const categoryClass = {
+      "使用手册": "green",
+      "技术文档": "purple",
+      "安全规范": "orange",
+      "培训资料": "cyan",
+      "AI 研究": "purple",
+      "版本管理": "",
+      "运维文档": "orange"
+    };
+
+    function formatCount(value) {
+      return Number(value || 0).toLocaleString("zh-CN");
+    }
+
+    function extClass(fileType) {
+      const type = String(fileType || "").toLowerCase();
+      if (type.includes("doc")) return "docx";
+      if (type.includes("ppt")) return "pptx";
+      if (type.includes("mp4") || type.includes("mov")) return "video";
+      if (type.includes("png") || type.includes("jpg") || type.includes("jpeg")) return "image";
+      return "pdf";
+    }
+
+    function statusText(item) {
+      if (item.status === "indexing") return `索引中 ${item.progress || 0}%`;
+      return item.status_text || (item.status === "failed" ? "失败" : "已索引");
+    }
+
+    function showToast(text) {
+      const toast = document.getElementById("toast");
+      toast.textContent = text;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function closeFloating() {
+      document.getElementById("filterPopover").classList.remove("show");
+    }
+
+    function positionPopover(popover, anchor) {
+      const rect = anchor.getBoundingClientRect();
+      popover.style.top = `${rect.bottom + 8}px`;
+      popover.style.left = `${Math.max(12, rect.right - popover.offsetWidth)}px`;
+    }
+
+    function filteredResources() {
+      return state.resources.filter((item) => state.filter === "all" || item.status === state.filter);
+    }
+
+    function buildPageItems(current, total) {
+      if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+      const pages = [1];
+      const start = Math.max(2, current - 1);
+      const end = Math.min(total - 1, current + 1);
+      if (start > 2) pages.push("...");
+      for (let page = start; page <= end; page += 1) pages.push(page);
+      if (end < total - 1) pages.push("...");
+      pages.push(total);
+      return pages;
+    }
+
+    function renderPager(total) {
+      const pager = document.getElementById("pagerPages");
+      const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
+      if (state.page > totalPages) state.page = totalPages;
+      pager.innerHTML = "";
+
+      const addButton = (label, page, options = {}) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `page-btn${options.active ? " active" : ""}${options.disabled ? " disabled" : ""}`;
+        button.textContent = label;
+        button.disabled = Boolean(options.disabled);
+        if (!options.disabled && !options.active) {
+          button.addEventListener("click", () => {
+            state.page = page;
+            renderRows();
+          });
+        }
+        pager.appendChild(button);
+      };
+
+      addButton("‹", state.page - 1, { disabled: state.page === 1 });
+      buildPageItems(state.page, totalPages).forEach((item) => {
+        if (item === "...") {
+          const ellipsis = document.createElement("span");
+          ellipsis.className = "page-ellipsis";
+          ellipsis.textContent = "...";
+          pager.appendChild(ellipsis);
+          return;
+        }
+        addButton(String(item), item, { active: item === state.page });
+      });
+      addButton("›", state.page + 1, { disabled: state.page === totalPages });
+      document.getElementById("pageSizeBtn").textContent = `${state.pageSize} 条/页⌄`;
+    }
+
+    function renderRows() {
+      const rows = document.getElementById("docRows");
+      rows.innerHTML = "";
+      const filtered = filteredResources();
+      const startIndex = (state.page - 1) * state.pageSize;
+      filtered.slice(startIndex, startIndex + state.pageSize).forEach((item) => {
+        const tr = document.createElement("tr");
+        const fileType = String(item.file_type || "pdf").replace("docx", "Word").replace("pptx", "PPT").replace("pdf", "PDF");
+        tr.innerHTML = `
+          <td><input type="checkbox" /></td>
+          <td><div class="file"><span class="file-icon ${extClass(item.file_type)}">${iconText(item.file_type)}</span><span title="${item.title}">${item.title}</span></div></td>
+          <td><span class="tag">${fileType}</span></td>
+          <td>${Number(item.size_mb || 0).toFixed(1)} MB</td>
+          <td><div class="owner"><span class="mini-avatar"></span>${item.owner || "刘耀光"}</div></td>
+          <td><span class="tag ${categoryClass[item.category] || ""}">${item.category || "产品文档"}</span></td>
+          <td><span class="status ${item.status || "indexed"}">${statusText(item)}</span></td>
+          <td>${item.updated_at || ""}</td>
+          <td>
+            <div class="op">
+              <button class="op-btn" type="button" data-action="download" data-id="${item.id}" title="下载">⇩</button>
+            </div>
+          </td>
+        `;
+        rows.appendChild(tr);
+      });
+      renderPager(filtered.length);
+    }
+
+    function updateCounts(base, resources) {
+      const total = Number(base.count ?? resources.length);
+      const indexed = resources.filter((item) => item.status === "indexed").length;
+      const indexing = resources.filter((item) => item.status === "indexing").length;
+      const failed = resources.filter((item) => item.status === "failed").length;
+      const today = new Date().toISOString().slice(0, 10);
+      const todayUpdated = resources.filter((item) => String(item.updated_at || "").startsWith(today)).length;
+      document.getElementById("docCount").textContent = formatCount(total);
+      document.getElementById("allCount").textContent = `(${formatCount(total)})`;
+      document.getElementById("indexedCount").textContent = `(${formatCount(indexed)})`;
+      document.getElementById("indexingCount").textContent = `(${formatCount(indexing)})`;
+      document.getElementById("failedCount").textContent = `(${formatCount(failed)})`;
+      document.getElementById("totalText").textContent = formatCount(total);
+      document.getElementById("indexedRate").textContent = base.progress ?? 0;
+      document.getElementById("storage").textContent = Number(base.storage_gb ?? 0).toFixed(1);
+      document.getElementById("storageNote").textContent = `${Number(base.storage_gb ?? 0).toFixed(1)} GB / 200 GB`;
+      document.getElementById("todayUpdated").textContent = todayUpdated;
+    }
+
+    function iconText(fileType) {
+      const type = extClass(fileType);
+      if (type === "docx") return "W";
+      if (type === "pptx") return "P";
+      if (type === "video") return "▶";
+      if (type === "image") return "▧";
+      return "⌁";
+    }
+
+    function applyPageConfig() {
+      document.title = config.title;
+      document.querySelectorAll("[data-nav-type]").forEach((link) => {
+        link.classList.toggle("active", link.dataset.navType === type);
+      });
+      document.getElementById("totalLabel").textContent = config.totalLabel;
+      document.getElementById("nameHeader").textContent = config.nameHeader;
+      document.getElementById("parseStep").textContent = config.parseStep;
+      document.getElementById("parseIcon").textContent = config.parseIcon;
+      document.getElementById("searchInput").placeholder = config.placeholder;
+    }
+
+    async function loadDocuments() {
+      const response = await fetch(apiUrl(`/api/knowledge-bases/${encodeURIComponent(type)}`));
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.currentUser && data.currentUser.name && data.currentUser.name !== currentUser) {
+        currentUser = data.currentUser.name;
+        localStorage.setItem("currentUser", currentUser);
+        if (currentUserName) currentUserName.textContent = currentUser || "登录";
+      }
+      document.title = `${data.item.title}管理`;
+      state.resources = (data.resources || []).sort((a, b) =>
+        String(b.updated_at || "").localeCompare(String(a.updated_at || ""))
+      );
+      state.page = 1;
+      updateCounts(data.item || {}, state.resources);
+      renderRows();
+    }
+
+    document.querySelectorAll(".tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+        button.classList.add("active");
+        state.filter = button.dataset.filter;
+        state.page = 1;
+        renderRows();
+      });
+    });
+
+    document.getElementById("pageSizeBtn").addEventListener("click", () => {
+      const sizes = [20, 50, 10];
+      const currentIndex = sizes.indexOf(state.pageSize);
+      state.pageSize = sizes[(currentIndex + 1) % sizes.length];
+      state.page = 1;
+      renderRows();
+    });
+
+    document.getElementById("filterBtn").addEventListener("click", (event) => {
+      const popover = document.getElementById("filterPopover");
+      const isOpen = popover.classList.contains("show");
+      closeFloating();
+      if (!isOpen) {
+        popover.classList.add("show");
+        positionPopover(popover, event.currentTarget);
+      }
+    });
+
+    document.getElementById("filterPopover").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-filter-shortcut]");
+      if (!button) return;
+      const targetFilter = button.dataset.filterShortcut;
+      const tab = document.querySelector(`.tab[data-filter="${targetFilter}"]`);
+      if (tab) tab.click();
+      closeFloating();
+    });
+
+    document.getElementById("docRows").addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-action]");
+      if (!button) return;
+      const item = state.resources.find((resource) => String(resource.id) === String(button.dataset.id));
+      if (!item) return;
+
+      if (button.dataset.action === "download") {
+        window.location.href = apiUrl(`/api/resources/${encodeURIComponent(item.id)}/download`);
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#filterBtn, #filterPopover")) {
+        closeFloating();
+      }
+    });
+
+    document.getElementById("searchInput").addEventListener("input", async (event) => {
+      const query = event.target.value.trim();
+      if (!query) {
+        await loadDocuments();
+        return;
+      }
+      const response = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(query)}`));
+      const data = await response.json();
+      state.resources = (data.items || []).filter((item) => item.knowledge_base_type === type);
+      state.page = 1;
+      renderRows();
+    });
+
+    applyPageConfig();
+    loadDocuments();
+  </script>
+</body>
+</html>

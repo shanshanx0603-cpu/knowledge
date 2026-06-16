@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全部概览</title>
+  <style>
+    :root {
+      --ink: #071a3d;
+      --muted: #62769a;
+      --blue: #1378ff;
+      --green: #20c79b;
+      --cyan: #27c9dd;
+      --purple: #8467ff;
+      --line: rgba(68, 118, 198, 0.16);
+      --panel: rgba(255, 255, 255, 0.78);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 9% 0%, rgba(31, 126, 255, 0.08), transparent 25%),
+        radial-gradient(circle at 88% 10%, rgba(37, 197, 218, 0.08), transparent 28%),
+        linear-gradient(145deg, #f8fbff 0%, #eef6ff 52%, #f9fcff 100%);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    .page {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: clamp(48px, 8.8vh, 72px) 1fr;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 170px 1fr 150px;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(72, 111, 172, 0.12);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 136px;
+      height: 36px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .title {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 13px;
+      margin: 0;
+      font-size: 21px;
+      font-weight: 900;
+      color: #092253;
+    }
+
+    .title::before,
+    .title::after {
+      content: "";
+      width: 54px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(45, 117, 255, 0.35));
+    }
+
+    .title::after {
+      background: linear-gradient(90deg, rgba(45, 117, 255, 0.35), transparent);
+    }
+
+    .title span { position: relative; }
+    .title span::before,
+    .title span::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #2f8bff;
+      box-shadow: 7px 0 0 #7bb7ff;
+    }
+    .title span::before { left: -34px; }
+    .title span::after { right: -24px; }
+
+    .user {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 29px;
+      padding: 3px 10px 3px 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(49, 96, 166, 0.12);
+      box-shadow: 0 5px 18px rgba(44, 85, 147, 0.10);
+      color: #4d5d78;
+      text-decoration: none;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 32%, #ffdfc6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 86%, #20365c 0 35%, transparent 36%),
+        linear-gradient(#e8f0ff, #c4d8ff);
+    }
+
+    .chev {
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid #7c8ba3;
+      border-bottom: 1.5px solid #7c8ba3;
+      transform: rotate(45deg) translateY(-2px);
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 22px;
+      padding: 20px 28px 22px 16px;
+    }
+
+    .side {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: 20px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(81, 130, 207, 0.14);
+      box-shadow: 0 18px 48px rgba(38, 95, 180, 0.08);
+    }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .nav a,
+    .upload {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 14px;
+      border-radius: 8px;
+      color: #233b70;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .nav a.active {
+      color: #0069ff;
+      background: linear-gradient(90deg, rgba(0, 111, 255, 0.14), rgba(0, 111, 255, 0.04));
+      box-shadow: inset 3px 0 0 #0b72ff, 0 10px 24px rgba(33, 116, 255, 0.10);
+    }
+
+    .nav svg,
+    .upload svg {
+      flex: 0 0 auto;
+      width: 23px;
+      height: 23px;
+    }
+
+    .upload {
+      border-top: 1px solid rgba(68, 109, 178, 0.14);
+      border-radius: 0;
+      padding-top: 18px;
+      color: #19376f;
+    }
+
+    .main {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 44px minmax(190px, 26vh) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(360px, 48vw);
+      align-items: center;
+      gap: 20px;
+    }
+
+    .crumb {
+      color: #28416f;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .search {
+      height: 44px;
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      align-items: center;
+      border: 1px solid rgba(39, 101, 195, 0.20);
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.70);
+      overflow: hidden;
+    }
+
+    .search input {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: none;
+      padding: 0 20px;
+      color: #17325e;
+      background: transparent;
+      font-size: 16px;
+    }
+
+    .search svg { justify-self: center; width: 26px; height: 26px; color: #0a2758; }
+
+    .summary {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr)) 260px;
+      align-items: center;
+      padding: 24px 26px;
+      border-radius: 12px;
+      border: 1px solid rgba(70, 141, 236, 0.32);
+      background:
+        linear-gradient(110deg, rgba(255,255,255,.88), rgba(255,255,255,.66)),
+        radial-gradient(circle at 96% 52%, rgba(42, 203, 224, .22), transparent 28%),
+        linear-gradient(162deg, transparent 0 58%, rgba(33, 122, 255, .10) 59%, transparent 72%);
+      box-shadow: 0 16px 44px rgba(36, 110, 209, 0.14), inset 0 0 0 1px rgba(255,255,255,.75);
+      overflow: hidden;
+    }
+
+    .metric-card {
+      min-width: 0;
+      height: 100%;
+      display: grid;
+      grid-template-rows: 66px 46px;
+      align-content: center;
+      justify-items: center;
+      gap: 12px;
+      padding: 0 clamp(10px, 1vw, 18px);
+      border-left: 1px solid rgba(73, 122, 199, 0.16);
+      text-align: center;
+    }
+
+    .metric-card:first-child { border-left: 0; }
+
+    .metric-label {
+      width: 100%;
+      display: grid;
+      grid-template-rows: 30px 24px;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: center;
+      justify-items: center;
+      color: #28416f;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 24px;
+      white-space: nowrap;
+      text-align: center;
+      row-gap: 8px;
+    }
+
+    .metric-label::after {
+      content: none;
+    }
+
+    .metric-icon {
+      width: 25px;
+      height: 25px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      color: #fff;
+      background: linear-gradient(145deg, #1681ff, #4bc8ff);
+      box-shadow: 0 8px 18px rgba(18, 116, 255, 0.20);
+    }
+
+    .metric-title {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric-value {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 5px;
+      color: #07133a;
+      font-size: clamp(24px, 2.1vw, 34px);
+      font-weight: 950;
+      line-height: 1;
+      white-space: nowrap;
+      align-self: center;
+    }
+
+    .metric-value small { font-size: 14px; font-weight: 850; }
+
+    .summary-art {
+      position: relative;
+      height: 148px;
+      display: grid;
+      place-items: center;
+    }
+
+    .platform {
+      position: absolute;
+      bottom: 6px;
+      width: 150px;
+      height: 58px;
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse at center, rgba(255,255,255,.95), rgba(80, 204, 231, .42) 48%, rgba(33, 125, 255, .18) 62%, transparent 63%);
+      box-shadow: 0 20px 30px rgba(21, 112, 210, .15);
+    }
+
+    .media-panel {
+      position: relative;
+      width: 72px;
+      height: 84px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      color: white;
+      background: linear-gradient(145deg, rgba(29, 202, 222, .85), rgba(43, 122, 255, .62));
+      border: 1px solid rgba(255,255,255,.78);
+      box-shadow: inset 0 0 22px rgba(255,255,255,.55), 0 18px 32px rgba(33, 132, 222, .23);
+      transform: perspective(220px) rotateY(-12deg);
+      z-index: 2;
+    }
+
+    .media-panel::before {
+      content: "";
+      width: 0;
+      height: 0;
+      border-top: 15px solid transparent;
+      border-bottom: 15px solid transparent;
+      border-left: 23px solid white;
+      margin-left: 6px;
+    }
+
+    .float-card {
+      position: absolute;
+      width: 50px;
+      height: 58px;
+      border-radius: 9px;
+      background: linear-gradient(145deg, rgba(255,255,255,.84), rgba(72, 153, 255, .30));
+      border: 1px solid rgba(77, 149, 255, .34);
+      box-shadow: inset 0 0 16px rgba(255,255,255,.8), 0 14px 22px rgba(53, 130, 230, .14);
+    }
+    .float-card.one { left: 35px; top: 12px; transform: rotate(-12deg); }
+    .float-card.two { right: 25px; top: 38px; transform: rotate(12deg); }
+
+    .cards {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, .92fr) minmax(0, 1.12fr) minmax(0, .96fr);
+      gap: 16px;
+    }
+
+    .panel {
+      min-width: 0;
+      min-height: 0;
+      padding: 18px 22px 16px;
+      display: grid;
+      grid-template-rows: 28px minmax(0, 1fr) 36px;
+      border-radius: 10px;
+      border: 1px solid rgba(78, 126, 202, 0.14);
+      background: rgba(255, 255, 255, 0.76);
+      box-shadow: 0 16px 42px rgba(40, 96, 176, 0.08);
+      overflow: hidden;
+    }
+
+    .panel-title {
+      margin: 0;
+      color: #12254b;
+      font-size: 18px;
+      font-weight: 950;
+      line-height: 28px;
+    }
+
+    .donut-row {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(88px, 104px) minmax(0, 1fr);
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 4px 4px 2px 0;
+      overflow: hidden;
+    }
+
+    .donut {
+      --a: 84%;
+      --b: 87%;
+      width: clamp(88px, 7.6vw, 104px);
+      height: clamp(88px, 7.6vw, 104px);
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--blue) 0 var(--a), var(--green) var(--a) var(--b), var(--purple) var(--b) 100%);
+      justify-self: center;
+      position: relative;
+    }
+
+    .donut::before {
+      content: "";
+      position: absolute;
+      inset: clamp(21px, 1.9vw, 24px);
+      border-radius: 50%;
+      background: white;
+      box-shadow: inset 0 0 0 1px rgba(31, 111, 230, .06);
+    }
+
+    .donut-center {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      font-weight: 900;
+      color: #06153a;
+      font-size: 16px;
+    }
+
+    .donut-center span {
+      display: block;
+      margin-top: 4px;
+      color: #617293;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .legend {
+      display: grid;
+      gap: 8px;
+      color: #2c426d;
+      font-size: 12px;
+      font-weight: 800;
+      align-content: center;
+      min-width: 0;
+    }
+
+    .legend-row {
+      display: grid;
+      grid-template-columns: 10px minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .legend-row span:nth-child(2) {
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .legend-row strong {
+      white-space: nowrap;
+      font-size: 12px;
+      justify-self: end;
+    }
+
+    .type-legend {
+      gap: 6px;
+      align-self: stretch;
+      align-content: center;
+    }
+
+    .type-legend .legend-row {
+      min-height: 34px;
+      grid-template-columns: 10px minmax(64px, 1fr) minmax(54px, auto);
+      column-gap: 8px;
+    }
+
+    .type-legend .dot {
+      align-self: center;
+    }
+
+    .type-legend .legend-label {
+      display: grid;
+      gap: 2px;
+      align-content: center;
+      line-height: 1.05;
+    }
+
+    .type-legend .legend-label span {
+      color: #172c58;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .type-legend .legend-label small {
+      color: #304772;
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .type-legend strong {
+      align-self: center;
+      color: #223b6c;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .type-panel .donut-row {
+      grid-template-columns: minmax(78px, 92px) minmax(0, 1fr);
+      gap: 12px;
+      padding: 0 2px;
+    }
+
+    .type-panel {
+      grid-template-rows: 28px minmax(0, 1fr) 36px;
+      padding-top: 18px;
+      padding-bottom: 16px;
+    }
+
+    .type-panel .panel-title {
+      line-height: 28px;
+    }
+
+    .type-panel .donut {
+      width: clamp(78px, 6.7vw, 92px);
+      height: clamp(78px, 6.7vw, 92px);
+    }
+
+    .type-panel .donut::before {
+      inset: clamp(18px, 1.55vw, 21px);
+    }
+
+    .type-panel .donut-center {
+      font-size: 14px;
+    }
+
+    .type-panel .donut-center span {
+      font-size: 9px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--c);
+    }
+
+    .panel-foot {
+      height: 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      border-top: 1px solid rgba(70, 112, 184, .12);
+      color: #354d78;
+      font-size: 14px;
+      font-weight: 850;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .panel-foot span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bar-chart {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(26px, 1fr));
+      grid-template-rows: minmax(0, 1fr) 24px;
+      align-items: end;
+      gap: clamp(3px, .55vw, 8px);
+      padding: 20px 2px 0 0;
+      overflow: hidden;
+    }
+
+    .bar-wrap {
+      height: 100%;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 24px;
+      align-items: end;
+      justify-items: center;
+      color: #41577e;
+      font-size: 11px;
+      font-weight: 750;
+      min-width: 0;
+    }
+
+    .bar-wrap > span {
+      white-space: nowrap;
+    }
+
+    .bar {
+      width: clamp(24px, 2.2vw, 30px);
+      height: var(--h);
+      min-height: 18px;
+      border-radius: 8px 8px 2px 2px;
+      background: linear-gradient(180deg, var(--c, #27c99d), rgba(39, 201, 157, .15));
+      box-shadow: 0 8px 18px rgba(39, 201, 157, .14);
+      position: relative;
+    }
+
+    .bar::before {
+      content: attr(data-v);
+      position: absolute;
+      left: 50%;
+      top: -24px;
+      transform: translateX(-50%);
+      color: #1b4f8f;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .task-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(88px, 100px) minmax(0, 1fr);
+      align-items: center;
+      gap: 16px;
+      padding-top: 4px;
+      overflow: hidden;
+    }
+
+    .task-donut {
+      width: clamp(88px, 7.2vw, 100px);
+      height: clamp(88px, 7.2vw, 100px);
+      background: conic-gradient(var(--green) 0 94%, #32a5ff 94% 97%, #ff9239 97% 98.2%, #8997ad 98.2% 100%);
+    }
+
+    .task-legend {
+      align-content: center;
+      gap: 14px;
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr);
+      align-items: end;
+      gap: 16px;
+      height: 36px;
+      color: #2d4672;
+      font-size: 14px;
+      font-weight: 900;
+      border-top: 1px solid rgba(70, 112, 184, .12);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .progress-row span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .progress {
+      height: 7px;
+      border-radius: 99px;
+      background: #e7eef9;
+      overflow: hidden;
+      align-self: end;
+      margin-bottom: 5px;
+    }
+
+    .progress span {
+      display: block;
+      width: 94%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #20c79b, #1fc7c5);
+    }
+
+    .file {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-weight: 850;
+    }
+
+    .file span:last-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-icon {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 4px;
+      color: white;
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .pdf { background: #f13c22; }
+    .docx { background: #166dff; }
+    .pptx { background: #ff7a00; }
+    .video { background: #14b8a6; }
+    .image { background: #766dff; }
+
+    .tag,
+    .status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      min-width: 66px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #126cff;
+      background: #eef5ff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .tag.green { color: #009d80; background: #e8faf4; }
+    .tag.purple { color: #7f4dff; background: #f2ecff; }
+    .tag.orange { color: #ff6b00; background: #fff0e5; }
+    .tag.cyan { color: #0099b8; background: #e8faff; }
+
+    .owner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mini-avatar {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 31%, #ffe0c6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 82%, #20365c 0 35%, transparent 36%),
+        linear-gradient(#eaf2ff, #bdd5ff);
+    }
+
+    .status.indexed { color: #12a887; background: #e8faf4; }
+    .status.indexing { color: #126cff; background: #edf4ff; }
+    .status.failed { color: #f13c33; background: #fff0f0; }
+    .status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      margin-right: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .page { min-width: 1180px; min-height: 760px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <a class="brand" href="knowledge-dashboard.html">
+        <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
+      </a>
+      <h1 class="title"><span>知识库中台</span></h1>
+      <a class="user" href="profile.html">
+        <span class="avatar"></span>
+        <span id="currentUserName">个人中心</span>
+        <span class="chev"></span>
+      </a>
+    </header>
+
+    <section class="workspace">
+      <aside class="side">
+        <nav class="nav">
+          <a class="active" href="overview.html">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" stroke="currentColor" stroke-width="2"/></svg>
+            全部概览
+          </a>
+          <a href="detail.html?type=documents">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6V3Z" fill="currentColor"/><path d="M9 11h6M9 15h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+            文档知识库
+          </a>
+          <a href="detail.html?type=videos">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m10 9 5 3-5 3V9Z" fill="currentColor"/></svg>
+            视频知识库
+          </a>
+          <a href="detail.html?type=images">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m7 17 4-5 3 3.5 2-2.5 2 4H7Z" fill="currentColor"/></svg>
+            图片知识库
+          </a>
+        </nav>
+        <a class="upload" href="upload.html">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 5 5m-5-5-5 5M5 16v4h14v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          上传文件
+        </a>
+      </aside>
+
+      <section class="main">
+        <div class="toolbar">
+          <div class="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;知识库管理</div>
+          <label class="search">
+            <input id="searchInput" type="search" placeholder="搜索知识库、文件、分类" />
+            <svg viewBox="0 0 24 24" fill="none"><path d="m21 21-4.6-4.6M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </label>
+        </div>
+
+        <section class="summary">
+          <article class="metric-card">
+            <div class="metric-label"><span class="metric-icon">▱</span><span class="metric-title">知识库总数</span></div>
+            <div class="metric-value"><span id="kbTotal">128</span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label"><span class="metric-icon">▤</span><span class="metric-title">文档</span></div>
+            <div class="metric-value"><span id="docTotal">8,462</span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label"><span class="metric-icon">▶</span><span class="metric-title">视频</span></div>
+            <div class="metric-value"><span id="videoTotal">326</span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label"><span class="metric-icon">▧</span><span class="metric-title">图片</span></div>
+            <div class="metric-value"><span id="imageTotal">1,284</span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label"><span class="metric-icon">◇</span><span class="metric-title">分类</span></div>
+            <div class="metric-value"><span id="categoryTotal">186</span></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label"><span class="metric-icon">◎</span><span class="metric-title">总存储</span></div>
+            <div class="metric-value"><span id="storageTotal">481.4</span><small>GB</small></div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label"><span class="metric-icon">◌</span><span class="metric-title">索引完成率</span></div>
+            <div class="metric-value"><span id="indexRate">94</span><small>%</small></div>
+          </article>
+          <div class="summary-art" aria-hidden="true">
+            <span class="float-card one"></span>
+            <span class="float-card two"></span>
+            <span class="platform"></span>
+            <span class="media-panel"></span>
+          </div>
+        </section>
+
+        <section class="cards">
+          <article class="panel type-panel">
+            <h2 class="panel-title">类型分布</h2>
+            <div class="donut-row">
+              <div class="donut" id="typeDonut"><div class="donut-center"><span id="typeTotal">10,072</span><span>总数量</span></div></div>
+              <div>
+                <div class="legend type-legend">
+                  <div class="legend-row"><span class="dot" style="--c:#1378ff"></span><span class="legend-label"><span>文档</span><small id="docLegend">8,462 个</small></span><strong id="docPercent">84.0%</strong></div>
+                  <div class="legend-row"><span class="dot" style="--c:#20c79b"></span><span class="legend-label"><span>视频</span><small id="videoLegend">326 个</small></span><strong id="videoPercent">3.2%</strong></div>
+                  <div class="legend-row"><span class="dot" style="--c:#8467ff"></span><span class="legend-label"><span>图片</span><small id="imageLegend">1,284 张</small></span><strong id="imagePercent">12.8%</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-foot"><span>总数量 <strong id="typeFootTotal">10,072</strong></span><span>总存储 <strong id="typeFootStorage">481.4 GB</strong></span></div>
+          </article>
+
+          <article class="panel">
+            <h2 class="panel-title">近 7 日新增</h2>
+            <div class="bar-chart" id="barChart">
+            </div>
+            <div class="panel-foot"><span>新增总数 <strong>746</strong></span><span>日均新增 <strong>106</strong></span></div>
+          </article>
+
+          <article class="panel">
+            <h2 class="panel-title">索引任务概览</h2>
+            <div class="task-grid">
+              <div class="donut task-donut"><div class="donut-center"><span id="taskTotal">10,072</span><span>总任务</span></div></div>
+              <div class="legend task-legend">
+                <div class="legend-row"><span class="dot" style="--c:#20c79b"></span><span>已索引</span><strong id="indexedTask">9,472 (94%)</strong></div>
+                <div class="legend-row"><span class="dot" style="--c:#32a5ff"></span><span>索引中</span><strong id="indexingTask">312 (3%)</strong></div>
+                <div class="legend-row"><span class="dot" style="--c:#ff9239"></span><span>失败</span><strong id="failedTask">126 (1%)</strong></div>
+                <div class="legend-row"><span class="dot" style="--c:#8997ad"></span><span>待处理</span><strong>162 (2%)</strong></div>
+              </div>
+            </div>
+            <div class="progress-row"><span>完成率 <strong id="taskRate">94%</strong></span><div class="progress"><span id="taskProgress"></span></div></div>
+          </article>
+        </section>
+
+      </section>
+    </section>
+  </main>
+
+  <script>
+    let currentUser = localStorage.getItem("currentUser") || "";
+    if (!currentUser || !localStorage.getItem("sessionToken")) {
+      currentUser = "";
+    }
+    const currentUserName = document.getElementById("currentUserName");
+    if (currentUserName) currentUserName.textContent = currentUser || "登录";
+
+    function apiUrl(path) {
+      const separator = path.includes("?") ? "&" : "?";
+      const token = localStorage.getItem("sessionToken") || "";
+      if (!currentUser || !token) {
+        location.href = "profile.html";
+        return path;
+      }
+      return `${path}${separator}user=${encodeURIComponent(currentUser)}&token=${encodeURIComponent(token)}`;
+    }
+
+    function numberText(value) {
+      return Number(value || 0).toLocaleString("zh-CN");
+    }
+
+    function parseCount(text) {
+      return Number(String(text || "0").replace(/,/g, ""));
+    }
+
+    function renderBars() {
+      const chart = document.getElementById("barChart");
+      const values = [
+        ["05-15", 68, "#27c99d"],
+        ["05-16", 92, "#27c99d"],
+        ["05-17", 104, "#27c99d"],
+        ["05-18", 128, "#27c99d"],
+        ["05-19", 96, "#27c99d"],
+        ["05-20", 112, "#27c99d"],
+        ["05-21", 146, "#1378ff"]
+      ];
+      values.forEach(([date, value, color]) => {
+        const wrap = document.createElement("div");
+        wrap.className = "bar-wrap";
+        wrap.innerHTML = `<div class="bar" data-v="${value}" style="--h:${Math.max(22, value / 180 * 100)}%; --c:${color}"></div><span>${date}</span>`;
+        chart.appendChild(wrap);
+      });
+    }
+
+    async function loadOverview() {
+      const [dashboardResponse, resourcesResponse] = await Promise.all([
+        fetch(apiUrl("/api/dashboard")),
+        fetch(apiUrl("/api/resources"))
+      ]);
+      if (!dashboardResponse.ok || !resourcesResponse.ok) return;
+      const dashboard = await dashboardResponse.json();
+      const resourcesData = await resourcesResponse.json();
+      if (dashboard.currentUser && dashboard.currentUser.name && dashboard.currentUser.name !== currentUser) {
+        currentUser = dashboard.currentUser.name;
+        localStorage.setItem("currentUser", currentUser);
+        if (currentUserName) currentUserName.textContent = currentUser || "登录";
+      }
+
+      const libraries = dashboard.libraries || {};
+      const docCount = parseCount(libraries.documents?.count);
+      const videoCount = parseCount(libraries.videos?.count);
+      const imageCount = parseCount(libraries.images?.count);
+      const total = docCount + videoCount + imageCount;
+      const storage = [libraries.documents, libraries.videos, libraries.images]
+        .reduce((sum, item) => sum + Number(String(item?.storage || "0").replace(/[^\d.]/g, "")), 0);
+      const resources = resourcesData.items || [];
+      const indexed = resources.filter((item) => item.status === "indexed").length;
+      const indexing = resources.filter((item) => item.status === "indexing").length;
+      const failed = resources.filter((item) => item.status === "failed").length;
+      const progress = resources.length ? Math.round(indexed / resources.length * 100) : 0;
+
+      document.getElementById("kbTotal").textContent = dashboard.stats?.totalKnowledgeBases || 3;
+      document.getElementById("docTotal").textContent = numberText(docCount);
+      document.getElementById("videoTotal").textContent = numberText(videoCount);
+      document.getElementById("imageTotal").textContent = numberText(imageCount);
+      document.getElementById("categoryTotal").textContent = numberText(dashboard.stats?.categoryCount || 0);
+      document.getElementById("storageTotal").textContent = storage.toFixed(1);
+      document.getElementById("indexRate").textContent = progress;
+      document.getElementById("typeTotal").textContent = numberText(total);
+      document.getElementById("typeFootTotal").textContent = numberText(total);
+      document.getElementById("typeFootStorage").textContent = `${storage.toFixed(1)} GB`;
+      document.getElementById("docLegend").textContent = `${numberText(docCount)} 个`;
+      document.getElementById("videoLegend").textContent = `${numberText(videoCount)} 个`;
+      document.getElementById("imageLegend").textContent = `${numberText(imageCount)} 张`;
+
+      const docPercent = total ? docCount / total * 100 : 0;
+      const videoPercent = total ? videoCount / total * 100 : 0;
+      const imagePercent = Math.max(0, 100 - docPercent - videoPercent);
+      document.getElementById("docPercent").textContent = `${docPercent.toFixed(1)}%`;
+      document.getElementById("videoPercent").textContent = `${videoPercent.toFixed(1)}%`;
+      document.getElementById("imagePercent").textContent = `${imagePercent.toFixed(1)}%`;
+      document.getElementById("typeDonut").style.setProperty("--a", `${docPercent}%`);
+      document.getElementById("typeDonut").style.setProperty("--b", `${docPercent + videoPercent}%`);
+
+      document.getElementById("taskTotal").textContent = numberText(resources.length);
+      document.getElementById("indexedTask").textContent = `${numberText(indexed)} (${progress}%)`;
+      document.getElementById("indexingTask").textContent = `${numberText(indexing)} (${resources.length ? Math.round(indexing / resources.length * 100) : 0}%)`;
+      document.getElementById("failedTask").textContent = `${numberText(failed)} (${resources.length ? Math.round(failed / resources.length * 100) : 0}%)`;
+      document.getElementById("taskRate").textContent = `${progress}%`;
+      document.getElementById("taskProgress").style.width = `${progress}%`;
+    }
+
+    document.getElementById("searchInput").addEventListener("input", async (event) => {
+      const query = event.target.value.trim();
+      if (!query) {
+        await loadOverview();
+        return;
+      }
+      await loadOverview();
+    });
+
+    renderBars();
+    loadOverview().catch((error) => console.warn("Overview API unavailable", error));
+  </script>
+</body>
+</html>

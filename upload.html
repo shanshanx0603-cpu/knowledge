@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>上传文件</title>
+  <style>
+    :root {
+      --ink: #071a3d;
+      --muted: #62769a;
+      --blue: #1378ff;
+      --green: #20c79b;
+      --line: rgba(68, 118, 198, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 9% 0%, rgba(31, 126, 255, 0.08), transparent 25%),
+        radial-gradient(circle at 88% 10%, rgba(37, 197, 218, 0.08), transparent 28%),
+        linear-gradient(145deg, #f8fbff 0%, #eef6ff 52%, #f9fcff 100%);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    .page {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: clamp(48px, 8.8vh, 72px) 1fr;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 170px 1fr 150px;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(72, 111, 172, 0.12);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 136px;
+      height: 36px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .title {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 13px;
+      margin: 0;
+      font-size: 21px;
+      font-weight: 900;
+      color: #092253;
+    }
+
+    .title::before,
+    .title::after {
+      content: "";
+      width: 54px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(45, 117, 255, 0.35));
+    }
+
+    .title::after {
+      background: linear-gradient(90deg, rgba(45, 117, 255, 0.35), transparent);
+    }
+
+    .title span { position: relative; }
+    .title span::before,
+    .title span::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #2f8bff;
+      box-shadow: 7px 0 0 #7bb7ff;
+    }
+    .title span::before { left: -34px; }
+    .title span::after { right: -24px; }
+
+    .user {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 29px;
+      padding: 3px 10px 3px 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(49, 96, 166, 0.12);
+      box-shadow: 0 5px 18px rgba(44, 85, 147, 0.10);
+      color: #4d5d78;
+      text-decoration: none;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 32%, #ffdfc6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 86%, #20365c 0 35%, transparent 36%),
+        linear-gradient(#e8f0ff, #c4d8ff);
+    }
+
+    .chev {
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid #7c8ba3;
+      border-bottom: 1.5px solid #7c8ba3;
+      transform: rotate(45deg) translateY(-2px);
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 22px;
+      padding: 20px 28px 22px 16px;
+    }
+
+    .side {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: 20px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(81, 130, 207, 0.14);
+      box-shadow: 0 18px 48px rgba(38, 95, 180, 0.08);
+    }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .nav a,
+    .upload {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 14px;
+      border-radius: 8px;
+      color: #233b70;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .nav svg,
+    .upload svg {
+      flex: 0 0 auto;
+      width: 23px;
+      height: 23px;
+    }
+
+    .upload {
+      color: #0069ff;
+      background: linear-gradient(90deg, rgba(0, 111, 255, 0.14), rgba(0, 111, 255, 0.04));
+      box-shadow: inset 3px 0 0 #0b72ff, 0 10px 24px rgba(33, 116, 255, 0.10);
+    }
+
+    .main {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 44px minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .crumb {
+      align-self: center;
+      color: #28416f;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .upload-panel {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(360px, .9fr) minmax(420px, 1.1fr);
+      gap: 18px;
+      padding: 22px;
+      border-radius: 12px;
+      border: 1px solid rgba(78, 126, 202, 0.14);
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 18px 48px rgba(38, 95, 180, 0.08);
+      overflow: hidden;
+    }
+
+    .dropzone {
+      position: relative;
+      min-height: 440px;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      border: 1.5px dashed rgba(19, 120, 255, .36);
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 50% 34%, rgba(32, 199, 155, .10), transparent 28%),
+        linear-gradient(145deg, rgba(238, 246, 255, .86), rgba(255,255,255,.74));
+      text-align: center;
+      overflow: hidden;
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+    }
+
+    .dropzone.dragging {
+      border-color: rgba(19, 120, 255, .85);
+      background: linear-gradient(145deg, rgba(226, 241, 255, .94), rgba(235, 255, 250, .82));
+      transform: translateY(-1px);
+    }
+
+    .upload-art {
+      width: 110px;
+      height: 110px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 22px;
+      border-radius: 28px;
+      color: white;
+      background: linear-gradient(145deg, #1378ff, #24c8d8);
+      box-shadow: 0 24px 44px rgba(24, 123, 231, .24);
+    }
+
+    .upload-art svg {
+      width: 54px;
+      height: 54px;
+    }
+
+    .drop-title {
+      margin: 0;
+      color: #061b44;
+      font-size: 24px;
+      font-weight: 950;
+    }
+
+    .drop-sub {
+      margin: 12px auto 22px;
+      max-width: 420px;
+      color: #617293;
+      font-size: 14px;
+      font-weight: 750;
+      line-height: 1.7;
+    }
+
+    .choose-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .choose-btn,
+    .submit-btn,
+    .link-btn {
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 8px;
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #006dff);
+      font-size: 14px;
+      font-weight: 900;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(19, 120, 255, 0.20);
+    }
+
+    .link-btn {
+      color: #0068ff;
+      background: #edf5ff;
+      box-shadow: none;
+    }
+
+    .choose-btn.secondary {
+      color: #087064;
+      background: #e8fbf7;
+      box-shadow: none;
+    }
+
+    .file-input { display: none; }
+
+    .file-list {
+      width: min(100%, 440px);
+      margin: 24px auto 0;
+      display: grid;
+      gap: 10px;
+      text-align: left;
+      max-height: 188px;
+      overflow: auto;
+    }
+
+    .file-item {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 9px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(78, 126, 202, 0.13);
+      color: #20385f;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .file-item.summary {
+      grid-template-columns: 34px 1fr;
+      background: rgba(232, 251, 247, .86);
+    }
+
+    .file-badge {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #20c7be);
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .file-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-size {
+      color: #6d7f9e;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .form-panel {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      padding: 6px 4px;
+    }
+
+    .form-title {
+      margin: 0;
+      color: #092253;
+      font-size: 22px;
+      font-weight: 950;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-content: start;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: #31466e;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(39, 101, 195, 0.18);
+      border-radius: 9px;
+      background: rgba(255,255,255,.82);
+      color: #17325e;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      outline: none;
+    }
+
+    input,
+    select {
+      height: 42px;
+      padding: 0 12px;
+    }
+
+    textarea {
+      min-height: 118px;
+      resize: none;
+      padding: 12px;
+      line-height: 1.55;
+    }
+
+    .hint {
+      padding: 14px;
+      border-radius: 10px;
+      color: #40577d;
+      background: rgba(239, 246, 255, 0.76);
+      border: 1px solid rgba(72, 128, 224, 0.12);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.7;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(70, 112, 184, .12);
+    }
+
+    .message {
+      margin-right: auto;
+      color: #e04444;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .message.success { color: #0aa97b; }
+
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .page { min-width: 1180px; min-height: 760px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <a class="brand" href="knowledge-dashboard.html">
+        <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
+      </a>
+      <h1 class="title"><span>知识库中台</span></h1>
+      <a class="user" href="profile.html">
+        <span class="avatar"></span>
+        <span id="currentUserName">个人中心</span>
+        <span class="chev"></span>
+      </a>
+    </header>
+
+    <section class="workspace">
+      <aside class="side">
+        <nav class="nav">
+          <a href="overview.html">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" stroke="currentColor" stroke-width="2"/></svg>
+            全部概览
+          </a>
+          <a href="detail.html?type=documents">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6V3Z" fill="currentColor"/><path d="M9 11h6M9 15h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+            文档知识库
+          </a>
+          <a href="detail.html?type=videos">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m10 9 5 3-5 3V9Z" fill="currentColor"/></svg>
+            视频知识库
+          </a>
+          <a href="detail.html?type=images">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m7 17 4-5 3 3.5 2-2.5 2 4H7Z" fill="currentColor"/></svg>
+            图片知识库
+          </a>
+        </nav>
+        <a class="upload" href="upload.html">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 5 5m-5-5-5 5M5 16v4h14v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          上传文件
+        </a>
+      </aside>
+
+      <section class="main">
+        <div class="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;上传文件</div>
+        <section class="upload-panel">
+          <div class="dropzone" id="dropzone">
+            <div>
+              <div class="upload-art" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4m0 0 5 5m-5-5-5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16v3h14v-3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+              </div>
+              <h2 class="drop-title">上传任意类型文件</h2>
+              <p class="drop-sub">支持文档、压缩包、音视频、图片、代码文件和文件夹。系统会按扩展名自动归入对应知识库，也可以手动选择目标知识库。</p>
+              <div class="choose-actions">
+                <button class="choose-btn" id="chooseBtn" type="button">选择文件</button>
+                <button class="choose-btn secondary" id="chooseFolderBtn" type="button">选择文件夹</button>
+              </div>
+              <input class="file-input" id="fileInput" type="file" multiple />
+              <input class="file-input" id="folderInput" type="file" multiple webkitdirectory directory />
+              <div class="file-list" id="fileList"></div>
+            </div>
+          </div>
+
+          <form class="form-panel" id="uploadForm">
+            <div>
+              <h2 class="form-title">入库信息</h2>
+              <div class="hint">上传成功后会保存到项目的 uploads 目录，并在 MySQL 的 resources 表中新增记录。普通用户上传后仅本人可见，管理员可全库查看。</div>
+            </div>
+            <div class="fields">
+              <label class="full">
+                文件标题
+                <input id="titleInput" name="title" placeholder="默认使用文件名" />
+              </label>
+              <label>
+                目标知识库
+                <select id="typeSelect" name="type">
+                  <option value="">自动识别</option>
+                  <option value="documents">文档知识库</option>
+                  <option value="videos">视频知识库</option>
+                  <option value="images">图片知识库</option>
+                </select>
+              </label>
+              <label>
+                分类
+                <input id="categoryInput" name="category" placeholder="例如：产品文档" />
+              </label>
+              <label class="full">
+                内容说明
+                <textarea id="descriptionInput" name="description" placeholder="补充文件用途、关键词或摘要"></textarea>
+              </label>
+            </div>
+            <div class="actions">
+              <span class="message" id="message"></span>
+              <a class="link-btn" id="detailLink" href="overview.html">返回概览</a>
+              <button class="submit-btn" type="submit">开始上传</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    let currentUser = localStorage.getItem("currentUser") || "";
+    if (!currentUser || !localStorage.getItem("sessionToken")) {
+      currentUser = "";
+    }
+    const currentUserName = document.getElementById("currentUserName");
+    if (currentUserName) currentUserName.textContent = currentUser || "登录";
+
+    function apiUrl(path) {
+      const separator = path.includes("?") ? "&" : "?";
+      const token = localStorage.getItem("sessionToken") || "";
+      if (!currentUser || !token) {
+        location.href = "profile.html";
+        return path;
+      }
+      return `${path}${separator}user=${encodeURIComponent(currentUser)}&token=${encodeURIComponent(token)}`;
+    }
+
+    const fileInput = document.getElementById("fileInput");
+    const folderInput = document.getElementById("folderInput");
+    const fileList = document.getElementById("fileList");
+    const dropzone = document.getElementById("dropzone");
+    const message = document.getElementById("message");
+    const submitBtn = document.querySelector(".submit-btn");
+    let selectedFiles = [];
+
+    function fileExt(name) {
+      const ext = String(name || "").split(".").pop();
+      return ext && ext !== name ? ext.slice(0, 4) : "FILE";
+    }
+
+    function formatSize(bytes) {
+      if (bytes > 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+      if (bytes > 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+      if (bytes > 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${bytes} B`;
+    }
+
+    function inferType(name) {
+      const ext = String(name || "").split(".").pop().toLowerCase();
+      if (["mp4", "mov", "avi", "mkv", "wmv", "flv", "webm", "m4v"].includes(ext)) return "videos";
+      if (["png", "jpg", "jpeg", "gif", "bmp", "webp", "svg", "tif", "tiff", "heic"].includes(ext)) return "images";
+      return "documents";
+    }
+
+    function setFiles(files) {
+      selectedFiles = Array.from(files || []).filter((file) => file && file.name);
+      if (!selectedFiles.length) {
+        fileList.innerHTML = "";
+        return;
+      }
+      const firstFile = selectedFiles[0];
+      document.getElementById("titleInput").value = selectedFiles.length === 1 ? firstFile.name : "";
+      if (!document.getElementById("typeSelect").value) {
+        document.getElementById("typeSelect").value = selectedFiles.length === 1 ? inferType(firstFile.name) : "";
+      }
+      const previewItems = selectedFiles.slice(0, 5).map((file) => `
+        <div class="file-item">
+          <span class="file-badge">${fileExt(file.name)}</span>
+          <span class="file-name">${file.webkitRelativePath || file.name}</span>
+          <span class="file-size">${formatSize(file.size)}</span>
+        </div>
+      `).join("");
+      const summary = selectedFiles.length > 5 ? `
+        <div class="file-item summary">
+          <span class="file-badge">+${selectedFiles.length - 5}</span>
+          <span class="file-name">其余 ${selectedFiles.length - 5} 个文件将在提交后继续上传</span>
+        </div>
+      ` : "";
+      fileList.innerHTML = previewItems + summary;
+    }
+
+    document.getElementById("chooseBtn").addEventListener("click", () => fileInput.click());
+    document.getElementById("chooseFolderBtn").addEventListener("click", () => folderInput.click());
+    fileInput.addEventListener("change", () => setFiles(fileInput.files));
+    folderInput.addEventListener("change", () => setFiles(folderInput.files));
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("dragging");
+      });
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("dragging");
+      });
+    });
+    dropzone.addEventListener("drop", (event) => {
+      setFiles(event.dataTransfer.files);
+    });
+
+    document.getElementById("uploadForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      message.className = "message";
+      message.textContent = "";
+      if (!selectedFiles.length) {
+        message.textContent = "请先选择文件";
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "上传中";
+        const uploadedTypes = new Set();
+        const titleValue = document.getElementById("titleInput").value.trim();
+        const selectedType = document.getElementById("typeSelect").value;
+        const categoryValue = document.getElementById("categoryInput").value;
+        const descriptionValue = document.getElementById("descriptionInput").value;
+
+        for (let index = 0; index < selectedFiles.length; index += 1) {
+          const file = selectedFiles[index];
+          message.textContent = `正在上传 ${index + 1}/${selectedFiles.length}：${file.webkitRelativePath || file.name}`;
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("title", selectedFiles.length === 1 ? titleValue : file.name);
+          formData.append("type", selectedType);
+          formData.append("category", categoryValue);
+          formData.append("description", descriptionValue);
+          formData.append("relative_path", file.webkitRelativePath || file.name);
+
+          const response = await fetch(apiUrl("/api/upload"), { method: "POST", body: formData });
+          const data = await response.json();
+          if (!response.ok) {
+            message.className = "message";
+            message.textContent = data.error || `第 ${index + 1} 个文件上传失败`;
+            return;
+          }
+          if (data.resource && data.resource.type) uploadedTypes.add(data.resource.type);
+        }
+        message.className = "message success";
+        message.textContent = `上传成功，已加入知识库（${selectedFiles.length} 个文件）`;
+        const typeList = Array.from(uploadedTypes);
+        document.getElementById("detailLink").href = typeList.length === 1
+          ? `detail.html?type=${encodeURIComponent(typeList[0])}`
+          : "overview.html";
+        document.getElementById("detailLink").textContent = typeList.length === 1 ? "查看知识库" : "查看概览";
+      } catch (error) {
+        message.className = "message";
+        message.textContent = "上传接口暂时不可用";
+        console.warn("Upload failed", error);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "开始上传";
+      }
+    });
+  </script>
+</body>
+</html>
