@@ -50,6 +50,31 @@
       font-weight: 750;
       line-height: 1.7;
     }
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 5px;
+      border-radius: 12px;
+      background: rgba(239, 246, 255, 0.78);
+      border: 1px solid rgba(72, 128, 224, 0.12);
+    }
+    .mode-tab {
+      height: 36px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: #40577d;
+      font-size: 13px;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    .mode-tab.active {
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #006dff);
+      box-shadow: 0 8px 18px rgba(19, 120, 255, 0.18);
+    }
     form {
       display: grid;
       gap: 14px;
@@ -85,6 +110,13 @@
       cursor: pointer;
       box-shadow: 0 12px 26px rgba(19, 120, 255, 0.22);
     }
+    .hint {
+      color: #607293;
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+    .hidden { display: none; }
     .message {
       min-height: 18px;
       color: #e04444;
@@ -112,6 +144,10 @@
     </div>
     <h1>登录管理</h1>
     <p class="sub">请输入账号密码进入知识库中台。管理员可查看全部内容，普通用户仅查看自己上传的文件。</p>
+    <div class="mode-tabs" role="tablist" aria-label="登录注册切换">
+      <button class="mode-tab active" id="loginTab" type="button">登录</button>
+      <button class="mode-tab" id="registerTab" type="button">注册</button>
+    </div>
     <form id="loginForm">
       <label>
         用户名
@@ -121,27 +157,84 @@
         密码
         <input id="password" autocomplete="current-password" type="password" placeholder="请输入密码" />
       </label>
+      <label id="confirmWrap" class="hidden">
+        确认密码
+        <input id="confirmPassword" autocomplete="new-password" type="password" placeholder="请再次输入密码" />
+      </label>
+      <div id="registerHint" class="hint hidden">注册用户名必须为中文；密码必须为英文+数字组合，且至少 8 个字符。</div>
       <div class="message" id="message"></div>
       <button class="login-btn" type="submit">登录</button>
     </form>
-    <div class="meta">当前已配置账号：管理员 admin；用户 刘耀光。</div>
+    <div class="meta">当前已配置账号：管理员 admin；用户可自行注册中文用户名账号。</div>
   </main>
 
   <script>
     localStorage.removeItem("adminToken");
+    let authMode = "login";
+    const form = document.getElementById("loginForm");
+    const accountInput = document.getElementById("account");
+    const passwordInput = document.getElementById("password");
+    const confirmInput = document.getElementById("confirmPassword");
+    const confirmWrap = document.getElementById("confirmWrap");
+    const registerHint = document.getElementById("registerHint");
+    const loginTab = document.getElementById("loginTab");
+    const registerTab = document.getElementById("registerTab");
+    const submitButton = document.querySelector(".login-btn");
+    const message = document.getElementById("message");
 
-    document.getElementById("loginForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const message = document.getElementById("message");
+    function setMode(mode) {
+      authMode = mode;
+      const registering = mode === "register";
+      loginTab.classList.toggle("active", !registering);
+      registerTab.classList.toggle("active", registering);
+      confirmWrap.classList.toggle("hidden", !registering);
+      registerHint.classList.toggle("hidden", !registering);
+      submitButton.textContent = registering ? "注册并登录" : "登录";
+      passwordInput.autocomplete = registering ? "new-password" : "current-password";
+      accountInput.placeholder = registering ? "请输入中文用户名" : "请输入用户名";
+      passwordInput.placeholder = registering ? "请输入英文+数字密码" : "请输入密码";
       message.className = "message";
       message.textContent = "";
+    }
+
+    function validChineseUsername(value) {
+      return /^[\u4e00-\u9fff]{2,20}$/.test(value);
+    }
+
+    function validPassword(value) {
+      return /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(value);
+    }
+
+    loginTab.addEventListener("click", () => setMode("login"));
+    registerTab.addEventListener("click", () => setMode("register"));
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      message.className = "message";
+      message.textContent = "";
+      const account = accountInput.value.trim();
+      const password = passwordInput.value;
+      if (authMode === "register") {
+        if (!validChineseUsername(account)) {
+          message.textContent = "用户名必须为 2-20 个中文字符";
+          return;
+        }
+        if (!validPassword(password)) {
+          message.textContent = "密码必须为英文+数字组合，且至少 8 个字符";
+          return;
+        }
+        if (password !== confirmInput.value) {
+          message.textContent = "两次输入的密码不一致";
+          return;
+        }
+      }
       try {
-        const response = await fetch("/api/login", {
+        const response = await fetch(authMode === "register" ? "/api/register" : "/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            account: document.getElementById("account").value.trim(),
-            password: document.getElementById("password").value
+            account,
+            password
           })
         });
         const data = await response.json();
@@ -152,10 +245,10 @@
         localStorage.setItem("currentUser", data.user.name);
         localStorage.setItem("sessionToken", data.user.sessionToken);
         message.className = "message success";
-        message.textContent = "登录成功";
+        message.textContent = authMode === "register" ? "注册成功" : "登录成功";
         location.href = "overview.html";
       } catch (error) {
-        message.textContent = "登录接口暂时不可用";
+        message.textContent = authMode === "register" ? "注册接口暂时不可用" : "登录接口暂时不可用";
         console.warn("Login failed", error);
       }
     });

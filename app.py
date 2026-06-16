@@ -160,6 +160,16 @@ def valid_session(user, token):
     return bool(user and token and hmac.compare_digest(token, session_token(user)))
 
 
+def valid_chinese_username(username):
+    return bool(re.fullmatch(r"[\u4e00-\u9fff]{2,20}", username or ""))
+
+
+def valid_user_password(password):
+    if len(password or "") < 8:
+        return False
+    return bool(re.search(r"[A-Za-z]", password) and re.search(r"\d", password) and re.fullmatch(r"[A-Za-z\d]+", password))
+
+
 def safe_filename(filename):
     name = Path(filename or "upload.bin").name
     name = re.sub(r"[^\w.\-\u4e00-\u9fff ]+", "_", name, flags=re.UNICODE).strip()
@@ -739,6 +749,8 @@ class AppHandler(BaseHTTPRequestHandler):
         params = urllib.parse.parse_qs(parsed.query)
         if parsed.path == "/api/login":
             return self.login()
+        if parsed.path == "/api/register":
+            return self.register()
         if parsed.path == "/api/upload":
             return self.upload_file(params)
         if parsed.path == "/api/knowledge-bases":
@@ -943,6 +955,34 @@ class AppHandler(BaseHTTPRequestHandler):
             )
             user["last_login"] = time.strftime("%Y-%m-%d")
         return self.send_json({"ok": True, "user": public_user(user, include_token=True)})
+
+    def register(self):
+        data = self.read_json()
+        username = str(data.get("account", "")).strip()
+        password = str(data.get("password", ""))
+        if not valid_chinese_username(username):
+            return self.send_json({"error": "用户名必须为 2-20 个中文字符"}, 400)
+        if not valid_user_password(password):
+            return self.send_json({"error": "密码必须为英文+数字组合，且至少 8 个字符"}, 400)
+
+        with connect_db() as conn:
+            exists = conn.execute(
+                "SELECT id FROM users WHERE login_account = %s OR name = %s",
+                (username, username),
+            ).fetchone()
+            if exists:
+                return self.send_json({"error": "该用户名已存在"}, 409)
+            conn.execute(
+                """
+                INSERT INTO users (name, role, account_type, login_account, password_hash, status, permission_scope, last_login)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (username, "普通用户", "user", username, hash_password(password), "正常", "仅本人上传", time.strftime("%Y-%m-%d")),
+            )
+            user = row_to_dict(
+                conn.execute("SELECT * FROM users WHERE login_account = %s", (username,)).fetchone()
+            )
+        return self.send_json({"ok": True, "user": public_user(user, include_token=True)}, 201)
 
     def upload_file(self, params):
         content_type = self.headers.get("Content-Type", "")
