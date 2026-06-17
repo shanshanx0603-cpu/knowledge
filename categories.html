@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分类管理</title>
+  <style>
+    :root { --ink:#071a3d; --blue:#1378ff; --green:#20c79b; --line:rgba(68,118,198,.16); }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 9% 0%, rgba(31,126,255,.08), transparent 25%),
+        radial-gradient(circle at 88% 10%, rgba(37,197,218,.08), transparent 28%),
+        linear-gradient(145deg, #f8fbff 0%, #eef6ff 52%, #f9fcff 100%);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .page { width: 100%; height: 100%; display: grid; grid-template-rows: clamp(48px, 8.8vh, 72px) 1fr; }
+    header {
+      display: grid;
+      grid-template-columns: 170px 1fr 150px;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(72,111,172,.12);
+      background: rgba(255,255,255,.72);
+      backdrop-filter: blur(18px);
+    }
+    .brand { display: flex; align-items: center; color: var(--ink); text-decoration: none; }
+    .brand-logo { width: 136px; height: 36px; object-fit: contain; display: block; }
+    .title { display:flex; justify-content:center; align-items:center; gap:13px; margin:0; font-size:21px; font-weight:900; color:#092253; }
+    .title::before,.title::after { content:""; width:54px; height:1px; background:linear-gradient(90deg, transparent, rgba(45,117,255,.35)); }
+    .title::after { background:linear-gradient(90deg, rgba(45,117,255,.35), transparent); }
+    .title span { position:relative; }
+    .title span::before,.title span::after { content:""; position:absolute; top:50%; width:5px; height:5px; border-radius:50%; background:#2f8bff; box-shadow:7px 0 0 #7bb7ff; }
+    .title span::before { left:-34px; }
+    .title span::after { right:-24px; }
+    .user {
+      justify-self:end; display:flex; align-items:center; gap:8px; height:29px; padding:3px 10px 3px 4px;
+      border-radius:999px; background:rgba(255,255,255,.9); border:1px solid rgba(49,96,166,.12);
+      box-shadow:0 5px 18px rgba(44,85,147,.10); color:#4d5d78; text-decoration:none; font-size:9px; font-weight:700;
+    }
+    .avatar {
+      width:22px; height:22px; border-radius:50%; display:grid; place-items:center; overflow:hidden;
+      background: radial-gradient(circle at 50% 32%, #ffdfc6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 86%, #20365c 0 35%, transparent 36%), linear-gradient(#e8f0ff, #c4d8ff);
+    }
+    .chev { width:6px; height:6px; border-right:1.5px solid #7c8ba3; border-bottom:1.5px solid #7c8ba3; transform:rotate(45deg) translateY(-2px); }
+    .workspace { min-height:0; display:grid; grid-template-columns:190px minmax(0,1fr); gap:22px; padding:20px 28px 22px 16px; }
+    .side {
+      min-height:0; display:grid; grid-template-rows:1fr auto; padding:20px 12px; border-radius:12px;
+      background:rgba(255,255,255,.72); border:1px solid rgba(81,130,207,.14); box-shadow:0 18px 48px rgba(38,95,180,.08);
+    }
+    .nav { display:grid; gap:10px; align-content:start; }
+    .nav a,.upload {
+      min-height:56px; display:flex; align-items:center; gap:12px; padding:0 14px; border-radius:8px;
+      color:#233b70; text-decoration:none; font-size:15px; font-weight:800; white-space:nowrap;
+    }
+    .nav a.active { color:#0069ff; background:linear-gradient(90deg, rgba(0,111,255,.14), rgba(0,111,255,.04)); box-shadow:inset 3px 0 0 #0b72ff, 0 10px 24px rgba(33,116,255,.10); }
+    .nav svg,.upload svg { flex:0 0 auto; width:23px; height:23px; }
+    .upload { border-top:1px solid rgba(68,109,178,.14); border-radius:0; padding-top:18px; color:#19376f; }
+    .main { min-width:0; min-height:0; display:grid; grid-template-rows:44px minmax(0,1fr); gap:16px; }
+    .crumb { align-self:center; color:#28416f; font-size:14px; font-weight:700; }
+    .panel {
+      min-height:0; padding:24px; border-radius:12px; border:1px solid rgba(78,126,202,.14);
+      background:rgba(255,255,255,.78); box-shadow:0 18px 48px rgba(38,95,180,.08); overflow:hidden;
+    }
+    .panel-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:22px; }
+    .panel-head h2 { margin:0; color:#092253; font-size:24px; font-weight:950; }
+    .panel-head p { margin:8px 0 0; color:#607293; font-size:13px; font-weight:800; }
+    .add-form { display:flex; align-items:center; gap:10px; }
+    .add-form input {
+      width: 220px; height: 40px; padding: 0 12px; border-radius: 8px;
+      border: 1px solid rgba(39,101,195,.18); background: rgba(255,255,255,.84);
+      color:#17325e; font-size:14px; font-weight:800; outline:none;
+    }
+    .add-form button {
+      height:40px; padding:0 18px; border:0; border-radius:8px; color:#fff;
+      background:linear-gradient(145deg, #1378ff, #006dff); font-size:14px; font-weight:950; cursor:pointer;
+      box-shadow:0 10px 22px rgba(19,120,255,.18);
+    }
+    .message { margin-bottom: 14px; min-height:18px; color:#e04444; font-size:13px; font-weight:900; }
+    .message.success { color:#0aa97b; }
+    .category-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; }
+    .category-card {
+      min-height:220px; display:grid; grid-template-rows:auto 1fr auto; padding:22px; border-radius:10px;
+      border:1px solid rgba(70,126,224,.18); background:linear-gradient(145deg, rgba(255,255,255,.92), rgba(236,246,255,.76));
+      box-shadow:0 14px 34px rgba(45,103,190,.08);
+    }
+    .category-icon {
+      width:46px; height:46px; display:grid; place-items:center; border-radius:12px; color:#fff;
+      background:linear-gradient(145deg, #1378ff, #20c7be); box-shadow:0 12px 24px rgba(19,120,255,.18);
+    }
+    .category-name { margin-top:18px; color:#092253; font-size:22px; font-weight:950; }
+    .category-count { color:#607293; font-size:14px; font-weight:850; }
+    .category-count strong { color:#071a3d; font-size:34px; font-weight:950; margin-right:6px; }
+    @media (max-width:1180px) { body { overflow:auto; } .page { min-width:1180px; min-height:760px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <a class="brand" href="knowledge-dashboard.html"><img class="brand-logo" src="assets/logo.png" alt="数智云工" /></a>
+      <h1 class="title"><span>知识库中台</span></h1>
+      <a class="user" href="profile.html"><span class="avatar"></span><span id="currentUserName">个人中心</span><span class="chev"></span></a>
+    </header>
+    <section class="workspace">
+      <aside class="side">
+        <nav class="nav">
+          <a href="overview.html"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" stroke="currentColor" stroke-width="2"/></svg>全部概览</a>
+          <a href="detail.html?type=documents"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6V3Z" fill="currentColor"/><path d="M9 11h6M9 15h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>文档知识库</a>
+          <a href="detail.html?type=videos"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m10 9 5 3-5 3V9Z" fill="currentColor"/></svg>视频知识库</a>
+          <a href="detail.html?type=images"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m7 17 4-5 3 3.5 2-2.5 2 4H7Z" fill="currentColor"/></svg>图片知识库</a>
+          <a class="active" href="categories.html"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>分类管理</a>
+        </nav>
+        <a class="upload" href="upload.html"><svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 5 5m-5-5-5 5M5 16v4h14v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>上传文件</a>
+      </aside>
+      <section class="main">
+        <div class="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;分类管理</div>
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>分类管理</h2>
+              <p>上传文件时可选择文件所属分类，普通用户只统计自己上传的文件。</p>
+            </div>
+            <form class="add-form" id="addCategoryForm">
+              <input id="categoryNameInput" placeholder="输入新分类名称" />
+              <button type="submit">添加</button>
+            </form>
+          </div>
+          <div class="message" id="message"></div>
+          <div class="category-grid" id="categoryGrid"></div>
+        </section>
+      </section>
+    </section>
+  </main>
+  <script>
+    let currentUser = localStorage.getItem("currentUser") || "";
+    if (!currentUser || !localStorage.getItem("sessionToken")) currentUser = "";
+    const currentUserName = document.getElementById("currentUserName");
+    if (currentUserName) currentUserName.textContent = currentUser || "登录";
+
+    function apiUrl(path) {
+      const separator = path.includes("?") ? "&" : "?";
+      const token = localStorage.getItem("sessionToken") || "";
+      if (!currentUser || !token) {
+        location.href = "profile.html";
+        return path;
+      }
+      return `${path}${separator}user=${encodeURIComponent(currentUser)}&token=${encodeURIComponent(token)}`;
+    }
+
+    function renderCategories(items) {
+      const grid = document.getElementById("categoryGrid");
+      grid.innerHTML = (items || []).map((item) => `
+        <article class="category-card">
+          <div class="category-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </div>
+          <div class="category-name">${item.name}</div>
+          <div class="category-count"><strong>${Number(item.count || 0).toLocaleString("zh-CN")}</strong>个文件</div>
+        </article>
+      `).join("");
+    }
+
+    async function loadCategories() {
+      const response = await fetch(apiUrl("/api/categories"));
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.currentUser && data.currentUser.name && data.currentUser.name !== currentUser) {
+        currentUser = data.currentUser.name;
+        localStorage.setItem("currentUser", currentUser);
+        if (currentUserName) currentUserName.textContent = currentUser || "登录";
+      }
+      renderCategories(data.items || []);
+    }
+
+    document.getElementById("addCategoryForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = document.getElementById("message");
+      const input = document.getElementById("categoryNameInput");
+      const name = input.value.trim();
+      message.className = "message";
+      message.textContent = "";
+      if (!/^[\w\u4e00-\u9fff ]{2,20}$/.test(name)) {
+        message.textContent = "分类名称需为 2-20 个中文、英文、数字或空格";
+        return;
+      }
+      try {
+        const response = await fetch(apiUrl("/api/categories"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          message.textContent = data.error || "添加失败";
+          return;
+        }
+        input.value = "";
+        message.className = "message success";
+        message.textContent = "添加成功";
+        await loadCategories();
+      } catch (error) {
+        message.textContent = "分类接口暂时不可用";
+        console.warn("Create category failed", error);
+      }
+    });
+
+    renderCategories([{name:"课程资料", count:0}, {name:"学习资料", count:0}, {name:"个人资料", count:0}]);
+    loadCategories().catch((error) => console.warn("Categories API unavailable", error));
+  </script>
+</body>
+</html>

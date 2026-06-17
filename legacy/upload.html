@@ -495,6 +495,10 @@
             <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m7 17 4-5 3 3.5 2-2.5 2 4H7Z" fill="currentColor"/></svg>
             图片知识库
           </a>
+          <a href="categories.html">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            分类管理
+          </a>
         </nav>
         <a class="upload" href="upload.html">
           <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 5 5m-5-5-5 5M5 16v4h14v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -543,7 +547,11 @@
               </label>
               <label>
                 分类
-                <input id="categoryInput" name="category" placeholder="例如：产品文档" />
+                <select id="categoryInput" name="category">
+                  <option value="课程资料">课程资料</option>
+                  <option value="学习资料">学习资料</option>
+                  <option value="个人资料">个人资料</option>
+                </select>
               </label>
               <label class="full">
                 内容说明
@@ -585,7 +593,27 @@
     const dropzone = document.getElementById("dropzone");
     const message = document.getElementById("message");
     const submitBtn = document.querySelector(".submit-btn");
+    const categoryInput = document.getElementById("categoryInput");
     let selectedFiles = [];
+
+    function renderCategoryOptions(items) {
+      const currentValue = categoryInput.value;
+      categoryInput.innerHTML = (items || []).map((item) => `<option value="${item.name}">${item.name}</option>`).join("");
+      if (currentValue && Array.from(categoryInput.options).some((option) => option.value === currentValue)) {
+        categoryInput.value = currentValue;
+      }
+    }
+
+    async function loadCategories() {
+      try {
+        const response = await fetch(apiUrl("/api/categories"));
+        if (!response.ok) return;
+        const data = await response.json();
+        renderCategoryOptions(data.items || []);
+      } catch (error) {
+        console.warn("Categories API unavailable", error);
+      }
+    }
 
     function fileExt(name) {
       const ext = String(name || "").split(".").pop();
@@ -669,7 +697,7 @@
         const uploadedTypes = new Set();
         const titleValue = document.getElementById("titleInput").value.trim();
         const selectedType = document.getElementById("typeSelect").value;
-        const categoryValue = document.getElementById("categoryInput").value;
+        const categoryValue = categoryInput.value;
         const descriptionValue = document.getElementById("descriptionInput").value;
 
         for (let index = 0; index < selectedFiles.length; index += 1) {
@@ -708,6 +736,8 @@
         submitBtn.textContent = "开始上传";
       }
     });
+
+    loadCategories();
   </script>
 </body>
 </html>

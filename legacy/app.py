@@ -28,6 +28,7 @@ DEFAULT_USER_NAME = "刘耀光"
 DEFAULT_USER_ACCOUNT = "刘耀光"
 DEFAULT_USER_PASSWORD = "liuyaoguang123"
 TOKEN_SALT = "knowledge-admin-session"
+DEFAULT_CATEGORIES = ["课程资料", "学习资料", "个人资料"]
 _DATABASE_READY = False
 
 
@@ -291,8 +292,28 @@ def init_db():
               endpoint VARCHAR(120) NOT NULL,
               created_at VARCHAR(30) NOT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+            CREATE TABLE IF NOT EXISTS categories (
+              id INT PRIMARY KEY AUTO_INCREMENT,
+              name VARCHAR(80) NOT NULL,
+              owner VARCHAR(80) NOT NULL DEFAULT '',
+              is_default TINYINT NOT NULL DEFAULT 0,
+              created_at VARCHAR(30) NOT NULL,
+              UNIQUE KEY uniq_category_owner (name, owner)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             """
         )
+
+        for category_name in DEFAULT_CATEGORIES:
+            exists = conn.execute(
+                "SELECT id FROM categories WHERE name = %s AND owner = ''",
+                (category_name,),
+            ).fetchone()
+            if not exists:
+                conn.execute(
+                    "INSERT INTO categories (name, owner, is_default, created_at) VALUES (%s, %s, %s, %s)",
+                    (category_name, "", 1, now_text()),
+                )
 
         existing_resource_columns = {
             row["Field"] for row in conn.execute("SHOW COLUMNS FROM resources").fetchall()
@@ -739,6 +760,8 @@ class AppHandler(BaseHTTPRequestHandler):
             return self.download_resource(resource_download_match.group(1), params)
         if path == "/api/resources":
             return self.list_resources(params)
+        if path == "/api/categories":
+            return self.list_categories(params)
         if path == "/api/search":
             return self.search(params)
 
@@ -751,6 +774,8 @@ class AppHandler(BaseHTTPRequestHandler):
             return self.login()
         if parsed.path == "/api/register":
             return self.register()
+        if parsed.path == "/api/categories":
+            return self.create_category(params)
         if parsed.path == "/api/upload":
             return self.upload_file(params)
         if parsed.path == "/api/knowledge-bases":
@@ -936,6 +961,81 @@ class AppHandler(BaseHTTPRequestHandler):
                 rows = []
         return self.send_json({"query": query, "items": rows, "currentUser": public_user(current_user)})
 
+    def list_categories(self, params):
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            owner_sql, owner_args = owner_clause(current_user, "r")
+            category_rows = conn.execute(
+                """
+                SELECT * FROM categories
+                WHERE owner = '' OR owner = %s
+                ORDER BY is_default DESC, id ASC
+                """,
+                (current_user["name"],),
+            ).fetchall()
+            category_names = [row["name"] for row in category_rows]
+            rows = conn.execute(
+                f"""
+                SELECT r.category, COUNT(*) AS count
+                FROM resources r
+                WHERE r.category IN ({", ".join(["%s"] * max(1, len(category_names)))})
+                {uploaded_clause("r")}
+                {owner_sql}
+                GROUP BY r.category
+                """,
+                (category_names or [""]) + owner_args,
+            ).fetchall()
+        counts = {row["category"]: int(row["count"] or 0) for row in rows}
+        return self.send_json({
+            "items": [
+                {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "count": counts.get(row["name"], 0),
+                    "isDefault": bool(row["is_default"]),
+                    "owner": row["owner"],
+                }
+                for row in category_rows
+            ],
+            "currentUser": public_user(current_user),
+        })
+
+    def create_category(self, params):
+        data = self.read_json()
+        name = str(data.get("name", "")).strip()
+        if not re.fullmatch(r"[\w\u4e00-\u9fff ]{2,20}", name or "", flags=re.UNICODE):
+            return self.send_json({"error": "分类名称需为 2-20 个中文、英文、数字或空格"}, 400)
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            owner = "" if is_admin(current_user) else current_user["name"]
+            default_exists = conn.execute(
+                "SELECT id FROM categories WHERE name = %s AND owner = ''",
+                (name,),
+            ).fetchone()
+            if default_exists:
+                return self.send_json({"error": "该分类已存在"}, 409)
+            user_exists = conn.execute(
+                "SELECT id FROM categories WHERE name = %s AND owner = %s",
+                (name, owner),
+            ).fetchone()
+            if user_exists:
+                return self.send_json({"error": "该分类已存在"}, 409)
+            conn.execute(
+                "INSERT INTO categories (name, owner, is_default, created_at) VALUES (%s, %s, %s, %s)",
+                (name, owner, 0, now_text()),
+            )
+            created = row_to_dict(
+                conn.execute(
+                    "SELECT * FROM categories WHERE name = %s AND owner = %s",
+                    (name, owner),
+                ).fetchone()
+            )
+        return self.send_json({"ok": True, "item": created}, 201)
+
     def login(self):
         data = self.read_json()
         account = str(data.get("account", "")).strip()
@@ -1005,6 +1105,27 @@ class AppHandler(BaseHTTPRequestHandler):
         original_name = safe_filename(file_item.filename)
         kb_type = infer_kb_type(original_name, form.getfirst("type", ""))
         ext = file_extension(original_name)
+        title = form.getfirst("title", "").strip() or original_name
+        category = form.getfirst("category", "").strip() or DEFAULT_CATEGORIES[0]
+        content = form.getfirst("description", "").strip() or f"上传文件：{original_name}"
+
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            category_exists = conn.execute(
+                """
+                SELECT id FROM categories
+                WHERE name = %s AND (owner = '' OR owner = %s)
+                """,
+                (category, current_user["name"]),
+            ).fetchone()
+            if not category_exists:
+                return self.send_json({"error": "请选择有效分类"}, 400)
+            base = conn.execute("SELECT id FROM knowledge_bases WHERE type = %s", (kb_type,)).fetchone()
+            if base is None:
+                return self.send_json({"error": "知识库不存在"}, 404)
+
         stored_name = f"{time.strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:10]}_{original_name}"
         target_dir = UPLOAD_DIR / kb_type
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -1014,17 +1135,11 @@ class AppHandler(BaseHTTPRequestHandler):
 
         size_mb = target_path.stat().st_size / 1024 / 1024
         mime_type = file_item.type or mimetypes.guess_type(original_name)[0] or "application/octet-stream"
-        title = form.getfirst("title", "").strip() or original_name
-        category = form.getfirst("category", "").strip() or default_category(kb_type)
-        content = form.getfirst("description", "").strip() or f"上传文件：{original_name}"
 
         with connect_db() as conn:
             current_user = self.require_user(conn, params)
             if current_user is None:
                 return
-            base = conn.execute("SELECT id FROM knowledge_bases WHERE type = %s", (kb_type,)).fetchone()
-            if base is None:
-                return self.send_json({"error": "知识库不存在"}, 404)
             owner = form.getfirst("owner", "").strip() if is_admin(current_user) else ""
             owner = owner or current_user["name"]
             created_at = now_text()
