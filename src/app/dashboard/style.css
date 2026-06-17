@@ -1257,3 +1257,12 @@
       }
     }
   
+.user-menu-wrap { position: relative; z-index: 10; }
+.user-menu-wrap .user { cursor: pointer; border: 0; background: none; font-family: inherit; }
+.user-dropdown { position: absolute; top: 110%; right: 0; min-width: 120px; background: #fff;
+  border: 1px solid rgba(49,96,166,0.12); border-radius: 10px; box-shadow: 0 12px 30px rgba(44,85,147,0.14);
+  padding: 4px; overflow: hidden; }
+.user-dropdown button { width: 100%; padding: 8px 12px; border: 0; border-radius: 7px;
+  background: transparent; color: #4d5d78; font-size: 12px; font-weight: 700;
+  text-align: left; cursor: pointer; }
+.user-dropdown button:hover { background: #f4f7fc; color: #e04444; }

@@ -6,11 +6,12 @@ import "./style.css";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const raw = localStorage.getItem("session");
-    if (!raw) { router.replace("/login"); return; }
+    if (!raw) { router.replace("/profile"); return; }
     setUser(JSON.parse(raw));
   }, [router]);
 
@@ -24,11 +25,20 @@ export default function DashboardPage() {
             <img className="brand-logo" src="/assets/logo.png" alt="数智云工" />
           </div>
           <h1 className="title"><span className="dot" />知识库中台<span className="dot" /></h1>
-          <a className="user" href="/profile" aria-label="进入个人中心">
-            <span className="avatar" aria-hidden="true" />
-            <span id="currentUserName">{user.name as string}</span>
-            <span className="chev" aria-hidden="true" />
-          </a>
+          <div className="user-menu-wrap">
+            <button className="user" onClick={() => setMenuOpen(!menuOpen)} aria-label="用户菜单">
+              <span className="avatar" aria-hidden="true" />
+              <span>{user.name as string}</span>
+              <span className="chev" aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <div className="user-dropdown">
+                <button onClick={() => { localStorage.removeItem("session"); router.replace("/profile"); }}>
+                  退出登录
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         <section className="stats" aria-label="顶部指标">

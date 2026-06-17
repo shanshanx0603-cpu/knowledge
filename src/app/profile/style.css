@@ -1,0 +1,132 @@
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(45, 117, 255, .12), transparent 30%),
+        radial-gradient(circle at 82% 12%, rgba(32, 199, 190, .12), transparent 28%),
+        linear-gradient(145deg, #f7fbff, #e2f0ff);
+      color: #071a3d;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .login-shell {
+      width: min(92vw, 460px);
+      padding: 30px;
+      border-radius: 18px;
+      border: 1px solid rgba(80, 132, 220, 0.18);
+      background: rgba(255, 255, 255, 0.84);
+      box-shadow: 0 26px 70px rgba(34, 93, 178, 0.18);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      margin-bottom: 26px;
+    }
+    .brand-logo {
+      width: 190px;
+      height: 50px;
+      object-fit: contain;
+      display: block;
+    }
+    h1 {
+      margin: 0;
+      color: #092253;
+      font-size: 28px;
+      font-weight: 950;
+    }
+    .sub {
+      margin: 10px 0 24px;
+      color: #617293;
+      font-size: 14px;
+      font-weight: 750;
+      line-height: 1.7;
+    }
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 5px;
+      border-radius: 12px;
+      background: rgba(239, 246, 255, 0.78);
+      border: 1px solid rgba(72, 128, 224, 0.12);
+    }
+    .mode-tab {
+      height: 36px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: #40577d;
+      font-size: 13px;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    .mode-tab.active {
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #006dff);
+      box-shadow: 0 8px 18px rgba(19, 120, 255, 0.18);
+    }
+    form {
+      display: grid;
+      gap: 14px;
+    }
+    label {
+      display: grid;
+      gap: 8px;
+      color: #31466e;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    input {
+      width: 100%;
+      height: 44px;
+      padding: 0 13px;
+      border-radius: 9px;
+      border: 1px solid rgba(72, 128, 224, 0.18);
+      background: rgba(255, 255, 255, 0.86);
+      color: #17325e;
+      font-size: 14px;
+      font-weight: 800;
+      outline: none;
+    }
+    .login-btn {
+      height: 44px;
+      margin-top: 6px;
+      border: 0;
+      border-radius: 9px;
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #006dff);
+      font-size: 15px;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 12px 26px rgba(19, 120, 255, 0.22);
+    }
+    .hint {
+      color: #607293;
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+    .hidden { display: none; }
+    .message {
+      min-height: 18px;
+      color: #e04444;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .message.success { color: #0aa97b; }
+    .meta {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 10px;
+      color: #40577d;
+      background: rgba(239, 246, 255, 0.78);
+      border: 1px solid rgba(72, 128, 224, 0.12);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.7;
+    }
+  

@@ -7,7 +7,7 @@ export default function Home() {
   const router = useRouter();
   useEffect(() => {
     const raw = localStorage.getItem("session");
-    router.replace(raw ? "/dashboard" : "/login");
+    router.replace(raw ? "/dashboard" : "/profile");
   }, [router]);
   return null;
 }
