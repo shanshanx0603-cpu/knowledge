@@ -21,6 +21,11 @@ MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "root")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "knowledge_center")
+OSS_ACCESS_KEY_ID = os.getenv("OSS_ACCESS_KEY_ID", "")
+OSS_ACCESS_KEY_SECRET = os.getenv("OSS_ACCESS_KEY_SECRET", "")
+OSS_ENDPOINT = os.getenv("OSS_ENDPOINT", "")
+OSS_UPLOAD_BUCKET = os.getenv("OSS_UPLOAD_BUCKET", "knowledge-center-upload")
+OSS_DOWNLOAD_EXPIRES = int(os.getenv("OSS_DOWNLOAD_EXPIRES", "3600"))
 HOST = "127.0.0.1"
 PORT = 3000
 ADMIN_ACCOUNT = "admin"
@@ -172,6 +177,58 @@ def valid_user_password(password):
     return bool(re.search(r"[A-Za-z]", password) and re.search(r"\d", password) and re.fullmatch(r"[A-Za-z\d]+", password))
 
 
+def oss_enabled():
+    return bool(OSS_ACCESS_KEY_ID and OSS_ACCESS_KEY_SECRET and OSS_ENDPOINT)
+
+
+def oss_module():
+    try:
+        import oss2
+    except ImportError as exc:
+        raise RuntimeError("缺少 oss2，请先运行: python3 -m pip install -r requirements.txt") from exc
+    return oss2
+
+
+def oss_auth():
+    oss2 = oss_module()
+    return oss2.Auth(OSS_ACCESS_KEY_ID, OSS_ACCESS_KEY_SECRET)
+
+
+def oss_bucket_client(bucket_name):
+    oss2 = oss_module()
+    return oss2.Bucket(oss_auth(), OSS_ENDPOINT, bucket_name)
+
+
+def ensure_upload_bucket():
+    if not oss_enabled():
+        return ""
+    bucket = oss_bucket_client(OSS_UPLOAD_BUCKET)
+    try:
+        bucket.create_bucket()
+    except Exception as exc:
+        message = str(exc)
+        if "BucketAlreadyOwnedByYou" not in message and "BucketAlreadyExists" not in message:
+            raise
+    return OSS_UPLOAD_BUCKET
+
+
+def oss_object_key(stored_name, user_id):
+    safe_user_id = re.sub(r"[^0-9A-Za-z_-]", "", str(user_id or "unknown")) or "unknown"
+    return f"user-{safe_user_id}_{safe_filename(stored_name)}"
+
+
+def delete_oss_object(resource):
+    if not resource or resource.get("storage_provider") != "oss":
+        return
+    bucket_name = resource.get("oss_bucket") or ""
+    object_key = resource.get("oss_object_key") or ""
+    if not bucket_name or not object_key:
+        return
+    if not oss_enabled():
+        raise RuntimeError("OSS 未配置，无法删除远程文件")
+    oss_bucket_client(bucket_name).delete_object(object_key)
+
+
 def safe_filename(filename):
     name = Path(filename or "upload.bin").name
     name = re.sub(r"[^\w.\-\u4e00-\u9fff ]+", "_", name, flags=re.UNICODE).strip()
@@ -252,6 +309,7 @@ def init_db():
               account_type VARCHAR(20) NOT NULL DEFAULT 'user',
               login_account VARCHAR(80),
               password_hash VARCHAR(128),
+              oss_bucket VARCHAR(120),
               status VARCHAR(40) NOT NULL DEFAULT '正常',
               permission_scope VARCHAR(80) NOT NULL DEFAULT '全库管理',
               last_login VARCHAR(30) NOT NULL
@@ -283,6 +341,10 @@ def init_db():
               progress INT NOT NULL DEFAULT 100,
               stored_path VARCHAR(500),
               mime_type VARCHAR(120),
+              storage_provider VARCHAR(20) NOT NULL DEFAULT 'local',
+              oss_bucket VARCHAR(120),
+              oss_endpoint VARCHAR(200),
+              oss_object_key VARCHAR(500),
               created_at VARCHAR(30) NOT NULL,
               updated_at VARCHAR(30) NOT NULL,
               FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id)
@@ -337,6 +399,10 @@ def init_db():
             ("progress", "INT NOT NULL DEFAULT 100"),
             ("stored_path", "VARCHAR(500)"),
             ("mime_type", "VARCHAR(120)"),
+            ("storage_provider", "VARCHAR(20) NOT NULL DEFAULT 'local'"),
+            ("oss_bucket", "VARCHAR(120)"),
+            ("oss_endpoint", "VARCHAR(200)"),
+            ("oss_object_key", "VARCHAR(500)"),
         ]
         for column, column_type in resource_migrations:
             if column not in existing_resource_columns:
@@ -351,6 +417,8 @@ def init_db():
             conn.execute("ALTER TABLE users ADD COLUMN login_account VARCHAR(80)")
         if "password_hash" not in existing_user_columns:
             conn.execute("ALTER TABLE users ADD COLUMN password_hash VARCHAR(128)")
+        if "oss_bucket" not in existing_user_columns:
+            conn.execute("ALTER TABLE users ADD COLUMN oss_bucket VARCHAR(120)")
 
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         if user_count == 0:
@@ -627,7 +695,7 @@ def log_operation(conn, user, action, target_type, target_id=None, detail=""):
 
 
 def uploaded_clause(prefix="r"):
-    return f" AND {prefix}.stored_path IS NOT NULL AND {prefix}.stored_path <> ''"
+    return f" AND (({prefix}.stored_path IS NOT NULL AND {prefix}.stored_path <> '') OR ({prefix}.storage_provider = 'oss' AND {prefix}.oss_object_key IS NOT NULL AND {prefix}.oss_object_key <> ''))"
 
 
 def visible_base_payload(conn, base, user):
@@ -887,12 +955,16 @@ class AppHandler(BaseHTTPRequestHandler):
                 if current_user is None:
                     return
                 owner_sql, owner_args = owner_clause(current_user, "r")
-                row = conn.execute(
-                    f"SELECT r.knowledge_base_id, r.size_mb FROM resources r WHERE r.id = %s{owner_sql}",
+                row = row_to_dict(conn.execute(
+                    f"SELECT r.* FROM resources r WHERE r.id = %s{owner_sql}",
                     [resource_id] + owner_args,
-                ).fetchone()
+                ).fetchone())
                 if row is None:
                     return self.send_json({"error": "资源不存在或无权限删除"}, 404)
+                try:
+                    delete_oss_object(row)
+                except Exception as exc:
+                    return self.send_json({"error": f"OSS 文件删除失败：{exc}"}, 500)
                 conn.execute("DELETE FROM resources WHERE id = %s", (resource_id,))
                 if row is not None:
                     sync_knowledge_base_summary(conn, row["knowledge_base_id"])
@@ -949,6 +1021,19 @@ class AppHandler(BaseHTTPRequestHandler):
                 log_operation(conn, current_user, "download", "resource", resource_id, resource.get("title", ""))
         if resource is None:
             return self.send_json({"error": "资源不存在或无权限下载"}, 404)
+        if resource.get("storage_provider") == "oss":
+            if not oss_enabled():
+                return self.send_json({"error": "OSS 未配置，无法下载该文件"}, 500)
+            bucket_name = resource.get("oss_bucket") or ""
+            object_key = resource.get("oss_object_key") or ""
+            if not bucket_name or not object_key:
+                return self.send_json({"error": "OSS 文件信息不完整"}, 404)
+            bucket = oss_bucket_client(bucket_name)
+            signed_url = bucket.sign_url("GET", object_key, OSS_DOWNLOAD_EXPIRES)
+            self.send_response(302)
+            self.send_header("Location", signed_url)
+            self.end_headers()
+            return
         if not resource.get("stored_path"):
             return self.send_json({"error": "该记录没有可下载的上传文件"}, 404)
 
@@ -1008,7 +1093,7 @@ class AppHandler(BaseHTTPRequestHandler):
         """
         args = []
         conditions = []
-        conditions.append("r.stored_path IS NOT NULL AND r.stored_path <> ''")
+        conditions.append("((r.stored_path IS NOT NULL AND r.stored_path <> '') OR (r.storage_provider = 'oss' AND r.oss_object_key IS NOT NULL AND r.oss_object_key <> ''))")
         if kb_type:
             conditions.append("k.type = %s")
             args.append(kb_type)
@@ -1246,6 +1331,12 @@ class AppHandler(BaseHTTPRequestHandler):
 
         size_mb = target_path.stat().st_size / 1024 / 1024
         mime_type = file_item.type or mimetypes.guess_type(original_name)[0] or "application/octet-stream"
+        storage_provider = "local"
+        oss_bucket_name = ""
+        oss_endpoint = ""
+        oss_key = ""
+        oss_url = ""
+        stored_path = str(target_path.relative_to(BASE_DIR))
 
         with connect_db() as conn:
             current_user = self.require_user(conn, params)
@@ -1253,12 +1344,25 @@ class AppHandler(BaseHTTPRequestHandler):
                 return
             owner = form.getfirst("owner", "").strip() if is_admin(current_user) else ""
             owner = owner or current_user["name"]
+            if oss_enabled():
+                oss_bucket_name = ensure_upload_bucket()
+                oss_key = oss_object_key(stored_name, current_user["id"])
+                bucket = oss_bucket_client(oss_bucket_name)
+                bucket.put_object_from_file(oss_key, str(target_path))
+                storage_provider = "oss"
+                oss_endpoint = OSS_ENDPOINT
+                oss_url = f"https://{oss_bucket_name}.{urllib.parse.urlparse(OSS_ENDPOINT).netloc}/{urllib.parse.quote(oss_key)}"
+                stored_path = ""
+                try:
+                    target_path.unlink()
+                except OSError:
+                    pass
             created_at = now_text()
             result = conn.execute(
                 """
                 INSERT INTO resources
-                  (knowledge_base_id, title, content, file_type, size_mb, owner, category, status, status_text, progress, stored_path, mime_type, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                  (knowledge_base_id, title, content, file_type, size_mb, owner, category, status, status_text, progress, stored_path, mime_type, storage_provider, oss_bucket, oss_endpoint, oss_object_key, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     base["id"],
@@ -1271,8 +1375,12 @@ class AppHandler(BaseHTTPRequestHandler):
                     "indexed",
                     "已索引",
                     100,
-                    str(target_path.relative_to(BASE_DIR)),
+                    stored_path,
                     mime_type,
+                    storage_provider,
+                    oss_bucket_name,
+                    oss_endpoint,
+                    oss_key,
                     created_at,
                     created_at,
                 ),
@@ -1284,7 +1392,7 @@ class AppHandler(BaseHTTPRequestHandler):
                 "upload",
                 "resource",
                 result.lastrowid,
-                f"{title} / {category}",
+                oss_url or f"{title} / {category}",
             )
         return self.send_json(
             {
@@ -1296,8 +1404,12 @@ class AppHandler(BaseHTTPRequestHandler):
                     "file_type": ext,
                     "size_mb": round(size_mb, 3),
                     "owner": owner,
-                    "stored_path": str(target_path.relative_to(BASE_DIR)),
+                    "stored_path": stored_path,
                     "mime_type": mime_type,
+                    "storage_provider": storage_provider,
+                    "oss_bucket": oss_bucket_name,
+                    "oss_object_key": oss_key,
+                    "url": oss_url,
                 },
             },
             201,
