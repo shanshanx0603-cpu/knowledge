@@ -1,7 +1,13 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function Home() {
-  return (
-    <main className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-bold text-slate-700">Knowledge 知识库</h1>
-    </main>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    const raw = localStorage.getItem("session");
+    router.replace(raw ? "/dashboard" : "/login");
+  }, [router]);
+  return null;
 }
