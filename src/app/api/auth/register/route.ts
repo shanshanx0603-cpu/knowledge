@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { initDb, queryOne, execute } from "@/lib/db";
 import { hashPassword, validAccount, validPassword, sanitizeUser, SESSION_COOKIE } from "@/lib/auth";
@@ -19,9 +20,10 @@ export async function POST(request: NextRequest) {
   }
 
   const now = new Date().toISOString().slice(0, 10);
+  const userId = crypto.randomUUID();
   execute(
-    "INSERT INTO users (name, role, account_type, login_account, password_hash, status, permission_scope, last_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    [account, "普通用户", "user", account, hashPassword(password), "正常", "仅本人上传", now],
+    "INSERT INTO users (user_id, name, role, account_type, login_account, password_hash, status, permission_scope, last_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [userId, account, "普通用户", "user", account, hashPassword(password), "正常", "仅本人上传", now],
   );
 
   const user = queryOne("SELECT * FROM users WHERE login_account = ?", [account]);

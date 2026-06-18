@@ -29,16 +29,17 @@ async function getDb(): Promise<Database> {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const wasmBinary: any = resolveWasmBinary();
   _SQL = await initSqlJs({ wasmBinary });
-  const isNew = !fs.existsSync(DB_PATH);
-  _db = new _SQL.Database(isNew ? undefined : fs.readFileSync(DB_PATH)) as Database;
-  if (isNew) createTables(_db);
+  _db = new _SQL.Database(fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH) : undefined) as Database;
+  createTables(_db);
   return _db;
 }
 
 function createTables(db: Database) {
+  console.log("[db] 建表...", DB_PATH);
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id         TEXT UNIQUE,
       name            TEXT NOT NULL,
       role            TEXT NOT NULL,
       status          TEXT NOT NULL DEFAULT '正常',
@@ -49,6 +50,8 @@ function createTables(db: Database) {
       password_hash   TEXT
     );
   `);
+  // 迁移旧表
+  try { db.run("ALTER TABLE users ADD COLUMN user_id TEXT UNIQUE"); } catch {}
   // 种子管理员
   const adminHash = crypto.createHash("sha256").update("Shan1234").digest("hex");
   db.run(
@@ -64,9 +67,11 @@ export function persist() {
 
 export async function initDb() {
   if (_ready) return;
+  console.log("[db] 初始化数据库...");
   await getDb();
   persist();
   _ready = true;
+  console.log("[db] 初始化完成:", DB_PATH);
 }
 
 export function queryAll<T = Record<string, unknown>>(sql: string, params: any[] = []): T[] {

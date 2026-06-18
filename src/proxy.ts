@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/profile", "/api/auth/login", "/api/auth/register", "/api/auth/logout"];
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 公开路径直接放行
