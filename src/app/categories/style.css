@@ -1,0 +1,103 @@
+
+    :root { --ink:#071a3d; --blue:#1378ff; --green:#20c79b; --line:rgba(68,118,198,.16); }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 9% 0%, rgba(31,126,255,.08), transparent 25%),
+        radial-gradient(circle at 88% 10%, rgba(37,197,218,.08), transparent 28%),
+        linear-gradient(145deg, #f8fbff 0%, #eef6ff 52%, #f9fcff 100%);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .page { width: 100%; height: 100%; display: grid; grid-template-rows: clamp(48px, 8.8vh, 72px) 1fr; }
+    header {
+      display: grid;
+      grid-template-columns: 170px 1fr 150px;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(72,111,172,.12);
+      background: rgba(255,255,255,.72);
+      backdrop-filter: blur(18px);
+    }
+    .brand { display: flex; align-items: center; color: var(--ink); text-decoration: none; }
+    .brand-logo { width: 136px; height: 36px; object-fit: contain; display: block; }
+    .title { display:flex; justify-content:center; align-items:center; gap:13px; margin:0; font-size:21px; font-weight:900; color:#092253; }
+    .title::before,.title::after { content:""; width:54px; height:1px; background:linear-gradient(90deg, transparent, rgba(45,117,255,.35)); }
+    .title::after { background:linear-gradient(90deg, rgba(45,117,255,.35), transparent); }
+    .title span { position:relative; }
+    .title span::before,.title span::after { content:""; position:absolute; top:50%; width:5px; height:5px; border-radius:50%; background:#2f8bff; box-shadow:7px 0 0 #7bb7ff; }
+    .title span::before { left:-34px; }
+    .title span::after { right:-24px; }
+    .user {
+      justify-self:end; display:flex; align-items:center; gap:8px; height:29px; padding:3px 10px 3px 4px;
+      border-radius:999px; background:rgba(255,255,255,.9); border:1px solid rgba(49,96,166,.12);
+      box-shadow:0 5px 18px rgba(44,85,147,.10); color:#4d5d78; text-decoration:none; font-size:9px; font-weight:700;
+    }
+    .avatar {
+      width:22px; height:22px; border-radius:50%; display:grid; place-items:center; overflow:hidden;
+      background: radial-gradient(circle at 50% 32%, #ffdfc6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 86%, #20365c 0 35%, transparent 36%), linear-gradient(#e8f0ff, #c4d8ff);
+    }
+    .chev { width:6px; height:6px; border-right:1.5px solid #7c8ba3; border-bottom:1.5px solid #7c8ba3; transform:rotate(45deg) translateY(-2px); }
+    .workspace { min-height:0; display:grid; grid-template-columns:190px minmax(0,1fr); gap:22px; padding:20px 28px 22px 16px; }
+    .side {
+      min-height:0; display:grid; grid-template-rows:1fr auto; padding:20px 12px; border-radius:12px;
+      background:rgba(255,255,255,.72); border:1px solid rgba(81,130,207,.14); box-shadow:0 18px 48px rgba(38,95,180,.08);
+    }
+    .nav { display:grid; gap:10px; align-content:start; }
+    .nav a,.upload {
+      min-height:56px; display:flex; align-items:center; gap:12px; padding:0 14px; border-radius:8px;
+      color:#233b70; text-decoration:none; font-size:15px; font-weight:800; white-space:nowrap;
+    }
+    .nav a.active { color:#0069ff; background:linear-gradient(90deg, rgba(0,111,255,.14), rgba(0,111,255,.04)); box-shadow:inset 3px 0 0 #0b72ff, 0 10px 24px rgba(33,116,255,.10); }
+    .nav svg,.upload svg { flex:0 0 auto; width:23px; height:23px; }
+    .upload { border-top:1px solid rgba(68,109,178,.14); border-radius:0; padding-top:18px; color:#19376f; }
+    .main { min-width:0; min-height:0; display:grid; grid-template-rows:44px minmax(0,1fr); gap:16px; }
+    .crumb { align-self:center; color:#28416f; font-size:14px; font-weight:700; }
+    .panel {
+      min-height:0; padding:24px; border-radius:12px; border:1px solid rgba(78,126,202,.14);
+      background:rgba(255,255,255,.78); box-shadow:0 18px 48px rgba(38,95,180,.08); overflow:hidden;
+    }
+    .panel-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:22px; }
+    .panel-head h2 { margin:0; color:#092253; font-size:24px; font-weight:950; }
+    .panel-head p { margin:8px 0 0; color:#607293; font-size:13px; font-weight:800; }
+    .add-form { display:flex; align-items:center; gap:10px; }
+    .add-form input {
+      width: 220px; height: 40px; padding: 0 12px; border-radius: 8px;
+      border: 1px solid rgba(39,101,195,.18); background: rgba(255,255,255,.84);
+      color:#17325e; font-size:14px; font-weight:800; outline:none;
+    }
+    .add-form button {
+      height:40px; padding:0 18px; border:0; border-radius:8px; color:#fff;
+      background:linear-gradient(145deg, #1378ff, #006dff); font-size:14px; font-weight:950; cursor:pointer;
+      box-shadow:0 10px 22px rgba(19,120,255,.18);
+    }
+    .message { margin-bottom: 14px; min-height:18px; color:#e04444; font-size:13px; font-weight:900; }
+    .message.success { color:#0aa97b; }
+    .category-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; }
+    .category-card {
+      min-height:220px; display:grid; grid-template-rows:auto 1fr auto; padding:22px; border-radius:10px;
+      border:1px solid rgba(70,126,224,.18); background:linear-gradient(145deg, rgba(255,255,255,.92), rgba(236,246,255,.76));
+      box-shadow:0 14px 34px rgba(45,103,190,.08);
+    }
+    .category-icon {
+      width:46px; height:46px; display:grid; place-items:center; border-radius:12px; color:#fff;
+      background:linear-gradient(145deg, #1378ff, #20c7be); box-shadow:0 12px 24px rgba(19,120,255,.18);
+    }
+    .category-name { margin-top:18px; color:#092253; font-size:22px; font-weight:950; }
+    .category-count { color:#607293; font-size:14px; font-weight:850; }
+    .category-count strong { color:#071a3d; font-size:34px; font-weight:950; margin-right:6px; }
+    @media (max-width:1180px) { body { overflow:auto; } .page { min-width:1180px; min-height:760px; } }
+  
+/* 覆盖 sidebar 中的通用样式 */
+.categories-content {
+  min-width: 0; min-height: 0;
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  gap: 16px;
+}
+.categories-content .crumb { align-self: center; color: #28416f; font-size: 14px; font-weight: 700; }
