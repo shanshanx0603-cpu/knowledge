@@ -26,7 +26,7 @@ export default function Header({ user }: Props) {
         </button>
         {open && (
           <div className="user-dropdown">
-            <button onClick={() => { localStorage.removeItem("session"); router.replace("/profile"); }}>
+            <button onClick={() => { fetch("/api/auth/logout", { method: "POST" }).finally(() => { localStorage.removeItem("session"); router.replace("/profile"); }); }}>
               退出登录
             </button>
           </div>

@@ -3,12 +3,18 @@
  */
 import crypto from "node:crypto";
 
+/** 登录 cookie 配置 */
+export const SESSION_COOKIE = {
+  name: "session",
+  opts: { httpOnly: true, path: "/", maxAge: 86400 * 7 },
+} as const;
+
 export function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
 export function validAccount(name: string): boolean {
-  return /^[一-鿿]{2,20}$/.test(name);
+  return /^[一-鿿]{2,20}$/.test(name) || /^[a-zA-Z0-9_-]{2,30}$/.test(name);
 }
 
 export function validPassword(pw: string): boolean {

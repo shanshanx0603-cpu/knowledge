@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initDb, queryOne, execute } from "@/lib/db";
-import { hashPassword, validAccount, validPassword, sanitizeUser } from "@/lib/auth";
+import { hashPassword, validAccount, validPassword, sanitizeUser, SESSION_COOKIE } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   await initDb();
@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
   );
 
   const user = queryOne("SELECT * FROM users WHERE login_account = ?", [account]);
-  return NextResponse.json({ ok: true, user: sanitizeUser(user!) }, { status: 201 });
+  const res = NextResponse.json({ ok: true, user: sanitizeUser(user!) }, { status: 201 });
+  res.cookies.set(SESSION_COOKIE.name, String(user!.id), SESSION_COOKIE.opts);
+  return res;
 }
 
 export const runtime = "nodejs";
