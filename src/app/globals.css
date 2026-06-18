@@ -16,24 +16,4 @@ body {
   min-height: 100vh;
   color: var(--ink);
   font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-  background:
-    radial-gradient(circle at 18% 0%, rgba(44, 116, 255, 0.10), transparent 28%),
-    linear-gradient(145deg, #f8fbff 0%, #edf5ff 48%, #dfeeff 100%);
-}
-
-.page {
-  width: 100vw;
-  height: 100vh;
-  display: grid;
-  grid-template-rows: clamp(48px, 8.8vh, 72px) 1fr;
-  overflow: hidden;
-}
-
-@media (min-width: 1180px) {
-  .page { min-width: 1180px; min-height: 760px; }
-}
-
-@media (max-width: 820px) {
-  body { overflow: auto; }
-  .workspace { grid-template-columns: 190px 1fr; }
 }
