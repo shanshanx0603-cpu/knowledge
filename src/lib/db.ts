@@ -52,6 +52,19 @@ function createTables(db: Database) {
   `);
   // 迁移旧表
   try { db.run("ALTER TABLE users ADD COLUMN user_id TEXT UNIQUE"); } catch {}
+  // 分类表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     TEXT NOT NULL,
+      name        TEXT NOT NULL,
+      description TEXT,
+      sort_order  INTEGER DEFAULT 0,
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL,
+      UNIQUE(user_id, name)
+    );
+  `);
   // 种子管理员
   const adminHash = crypto.createHash("sha256").update("Shan1234").digest("hex");
   db.run(
