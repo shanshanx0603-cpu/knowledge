@@ -13,18 +13,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "密码必须为英文+数字组合，且至少 8 个字符" }, { status: 400 });
   }
 
-  const exists = queryOne("SELECT id FROM users WHERE account = ?", [account]);
+  const exists = queryOne("SELECT id FROM users WHERE login_account = ?", [account]);
   if (exists) {
     return NextResponse.json({ error: "该用户名已存在" }, { status: 409 });
   }
 
   const now = new Date().toISOString().slice(0, 10);
   execute(
-    "INSERT INTO users (name, account, password_hash, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-    [account, account, hashPassword(password), "user", "active", now],
+    "INSERT INTO users (name, role, account_type, login_account, password_hash, status, permission_scope, last_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [account, "普通用户", "user", account, hashPassword(password), "正常", "仅本人上传", now],
   );
 
-  const user = queryOne("SELECT * FROM users WHERE account = ?", [account]);
+  const user = queryOne("SELECT * FROM users WHERE login_account = ?", [account]);
   return NextResponse.json({ ok: true, user: sanitizeUser(user!) }, { status: 201 });
 }
 

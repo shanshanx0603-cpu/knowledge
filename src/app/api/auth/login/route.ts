@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initDb, queryOne } from "@/lib/db";
+import { initDb, queryOne, execute } from "@/lib/db";
 import { hashPassword, sanitizeUser } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -9,13 +9,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "请输入账号和密码" }, { status: 400 });
   }
 
-  const user = queryOne("SELECT * FROM users WHERE account = ? AND status = 'active'", [account]);
+  const user = queryOne("SELECT * FROM users WHERE login_account = ? AND status = '正常'", [account]);
   if (!user || user.password_hash !== hashPassword(password)) {
     return NextResponse.json({ error: "账号或密码错误" }, { status: 401 });
   }
 
   const now = new Date().toISOString().slice(0, 10);
-  const { execute } = await import("@/lib/db");
   execute("UPDATE users SET last_login = ? WHERE id = ?", [now, user.id]);
 
   return NextResponse.json({ ok: true, user: sanitizeUser(user) });

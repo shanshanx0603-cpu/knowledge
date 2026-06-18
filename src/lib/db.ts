@@ -4,6 +4,7 @@
 import initSqlJs, { type Database } from "sql.js";
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "knowledge.db");
@@ -28,8 +29,32 @@ async function getDb(): Promise<Database> {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const wasmBinary: any = resolveWasmBinary();
   _SQL = await initSqlJs({ wasmBinary });
-  _db = new _SQL.Database(fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH) : undefined);
-  return _db!;
+  const isNew = !fs.existsSync(DB_PATH);
+  _db = new _SQL.Database(isNew ? undefined : fs.readFileSync(DB_PATH)) as Database;
+  if (isNew) createTables(_db);
+  return _db;
+}
+
+function createTables(db: Database) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      name            TEXT NOT NULL,
+      role            TEXT NOT NULL,
+      status          TEXT NOT NULL DEFAULT '正常',
+      permission_scope TEXT NOT NULL DEFAULT '全部资料',
+      last_login      TEXT NOT NULL,
+      account_type    TEXT NOT NULL DEFAULT 'user',
+      login_account   TEXT,
+      password_hash   TEXT
+    );
+  `);
+  // 种子管理员
+  const adminHash = crypto.createHash("sha256").update("Shan1234").digest("hex");
+  db.run(
+    "INSERT OR IGNORE INTO users (name, role, account_type, login_account, password_hash, status, permission_scope, last_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    ["管理员", "知识库运营与系统维护", "admin", "admin", adminHash, "正常", "全部资料", new Date().toISOString().slice(0, 10)],
+  );
 }
 
 export function persist() {
@@ -39,19 +64,7 @@ export function persist() {
 
 export async function initDb() {
   if (_ready) return;
-  const db = await getDb();
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      name          TEXT NOT NULL,
-      account       TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      role          TEXT NOT NULL DEFAULT 'user',
-      status        TEXT NOT NULL DEFAULT 'active',
-      created_at    TEXT NOT NULL,
-      last_login    TEXT
-    );
-  `);
+  await getDb();
   persist();
   _ready = true;
 }
