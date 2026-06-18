@@ -52,7 +52,7 @@ export default function AppLayout({ activeType, children }: Props) {
         <aside className="side">
           <nav className="nav">
             <Link href="/overview" className={activeType === "overview" ? "active" : ""}>
-              <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4V6Zm10 0h6v6h-6V6Z" stroke="currentColor" strokeWidth="2"/></svg>
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" stroke="currentColor" strokeWidth="2"/></svg>
               全部概览
             </Link>
             <Link href="/detail?type=documents" className={activeType === "documents" ? "active" : ""}>
@@ -68,12 +68,12 @@ export default function AppLayout({ activeType, children }: Props) {
               图片知识库
             </Link>
             <Link href="/categories" className={activeType === "categories" ? "active" : ""}>
-              <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4V3Zm9 0h7v3h-7V3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
               分类管理
             </Link>
           </nav>
           <Link className="upload" href="/upload">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 5 5m-5-5-5 5M5 16v4h14V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 5 5m-5-5-5 5M5 16v4h14v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             上传文件
           </Link>
         </aside>
