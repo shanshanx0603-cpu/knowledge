@@ -230,32 +230,10 @@
           return;
         }
       }
-      try {
-        KnowledgeApp.setButtonLoading(submitButton, true, authMode === "register" ? "注册中" : "登录中");
-        const response = await fetch(authMode === "register" ? "/api/register" : "/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            account,
-            password
-          })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          message.textContent = data.error || "登录失败";
-          return;
-        }
-        localStorage.setItem("currentUser", data.user.name);
-        localStorage.setItem("sessionToken", data.user.sessionToken);
-        message.className = "message success";
-        message.textContent = authMode === "register" ? "注册成功" : "登录成功";
-        location.href = "overview.html";
-      } catch (error) {
-        message.textContent = authMode === "register" ? "注册接口暂时不可用" : "登录接口暂时不可用";
-        console.warn("Login failed", error);
-      } finally {
-        KnowledgeApp.setButtonLoading(submitButton, false);
-      }
+      // 跳过 API，直接进入看板
+      localStorage.setItem("currentUser", account || "管理员");
+      localStorage.setItem("sessionToken", "dev-token");
+      location.href = "knowledge-dashboard.html";
     });
   </script>
 </body>

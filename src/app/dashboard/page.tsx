@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
 import "./style.css";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -20,26 +20,7 @@ export default function DashboardPage() {
   return (
     <main className="dashboard" aria-label="知识库中台仪表盘">
       <div className="dashboard-inner">
-        <header>
-          <div className="brand">
-            <img className="brand-logo" src="/assets/logo.png" alt="数智云工" />
-          </div>
-          <h1 className="title"><span className="dot" />知识库中台<span className="dot" /></h1>
-          <div className="user-menu-wrap">
-            <button className="user" onClick={() => setMenuOpen(!menuOpen)} aria-label="用户菜单">
-              <span className="avatar" aria-hidden="true" />
-              <span>{user.name as string}</span>
-              <span className="chev" aria-hidden="true" />
-            </button>
-            {menuOpen && (
-              <div className="user-dropdown">
-                <button onClick={() => { localStorage.removeItem("session"); router.replace("/profile"); }}>
-                  退出登录
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
+        <Header user={user} />
 
         <section className="stats" aria-label="顶部指标">
           <article className="stat has-icon">

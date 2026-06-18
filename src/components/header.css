@@ -1,0 +1,57 @@
+/* 公共顶部导航 */
+.page-header {
+  display: grid;
+  grid-template-columns: 170px 1fr 150px;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(72, 111, 172, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+}
+.page-header .brand { display: flex; align-items: center; text-decoration: none; color: var(--ink, #071a3d); }
+.page-header .brand-logo { width: 136px; height: 36px; object-fit: contain; display: block; }
+.page-header .header-title {
+  position: relative; display: flex; justify-content: center; align-items: center; gap: 54px;
+  margin: 0; font-size: clamp(34px, 2.35vw, 52px); line-height: 1; font-weight: 950;
+  color: #061b49; letter-spacing: 0;
+}
+.page-header .header-title::before,
+.page-header .header-title::after {
+  content: ""; width: clamp(112px, 10.8vw, 170px); height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(77, 147, 255, 0.58));
+}
+.page-header .header-title::after { background: linear-gradient(90deg, rgba(77, 147, 255, 0.58), transparent); }
+.page-header .dot { position: relative; }
+.page-header .dot::before, .page-header .dot::after {
+  content: ""; position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
+  background: #2d84ff; box-shadow: 18px 0 0 #69b0ff;
+}
+.page-header .dot::before { left: calc(-1 * clamp(76px, 6.3vw, 112px)); transform: translateY(-50%); }
+.page-header .dot::after { right: calc(-1 * clamp(74px, 6.1vw, 110px)); transform: translateY(-50%); }
+
+/* 用户下拉 */
+.user-menu-wrap { justify-self: end; position: relative; z-index: 10; }
+.user-btn {
+  display: flex; align-items: center; gap: 8px; height: 29px; padding: 3px 10px 3px 4px;
+  border-radius: 999px; background: rgba(255,255,255,0.9); border: 1px solid rgba(49,96,166,0.12);
+  box-shadow: 0 5px 18px rgba(44,85,147,0.10); color: #4d5d78;
+  font-size: 9px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.avatar {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(circle at 50% 32%, #ffdfc6 0 22%, transparent 23%),
+    radial-gradient(circle at 50% 86%, #20365c 0 35%, transparent 36%), linear-gradient(#e8f0ff, #c4d8ff);
+}
+.avatar::before { content: ""; width: 8px; height: 5px; margin-top: -7px; border-radius: 7px 7px 2px 2px; background: #3e2f29; box-shadow: 0 5px 0 #ffd5b8; }
+.chev { width: 6px; height: 6px; border-right: 1.5px solid #7c8ba3; border-bottom: 1.5px solid #7c8ba3; transform: rotate(45deg) translateY(-2px); }
+.user-dropdown {
+  position: absolute; top: 110%; right: 0; min-width: 120px; background: #fff;
+  border: 1px solid rgba(49,96,166,0.12); border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(44,85,147,0.14); padding: 4px; overflow: hidden;
+}
+.user-dropdown button {
+  width: 100%; padding: 8px 12px; border: 0; border-radius: 7px;
+  background: transparent; color: #4d5d78; font-size: 12px; font-weight: 700;
+  text-align: left; cursor: pointer;
+}
+.user-dropdown button:hover { background: #f4f7fc; color: #e04444; }
