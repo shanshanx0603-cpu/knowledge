@@ -67,10 +67,13 @@ function createTables(db: Database) {
   `);
   // 种子管理员
   const adminHash = crypto.createHash("sha256").update("Shan1234").digest("hex");
+  const adminId = crypto.randomUUID();
   db.run(
-    "INSERT OR IGNORE INTO users (name, role, account_type, login_account, password_hash, status, permission_scope, last_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    ["管理员", "知识库运营与系统维护", "admin", "admin", adminHash, "正常", "全部资料", new Date().toISOString().slice(0, 10)],
+    "INSERT OR IGNORE INTO users (user_id, name, role, account_type, login_account, password_hash, status, permission_scope, last_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [adminId, "管理员", "知识库运营与系统维护", "admin", "admin", adminHash, "正常", "全部资料", new Date().toISOString().slice(0, 10)],
   );
+  // 给已有用户补充 user_id
+  db.run("UPDATE users SET user_id = ? WHERE (user_id IS NULL OR user_id = '') AND login_account = 'admin'", [adminId]);
 }
 
 export function persist() {
