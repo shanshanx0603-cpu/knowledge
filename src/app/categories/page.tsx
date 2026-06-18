@@ -56,9 +56,9 @@ export default function CategoriesPage() {
 
   return (
     <Sidebar>
-      <section className="workspace">
+      <section className="cat-workspace">
         <NavSidebar activeType="categories" />
-        <section className="main">
+        <section className="cat-main">
           <div className="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;分类管理</div>
           <section className="panel">
             <div className="panel-head">
