@@ -136,6 +136,7 @@
       line-height: 1.7;
     }
   </style>
+  <link rel="stylesheet" href="assets/app-common.css" />
 </head>
 <body>
   <main class="login-shell">
@@ -168,6 +169,7 @@
     <div class="meta">当前已配置账号：管理员 admin；用户可自行注册中文用户名账号。</div>
   </main>
 
+  <script src="assets/app-common.js"></script>
   <script>
     localStorage.removeItem("adminToken");
     let authMode = "login";
@@ -229,6 +231,7 @@
         }
       }
       try {
+        KnowledgeApp.setButtonLoading(submitButton, true, authMode === "register" ? "注册中" : "登录中");
         const response = await fetch(authMode === "register" ? "/api/register" : "/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -250,6 +253,8 @@
       } catch (error) {
         message.textContent = authMode === "register" ? "注册接口暂时不可用" : "登录接口暂时不可用";
         console.warn("Login failed", error);
+      } finally {
+        KnowledgeApp.setButtonLoading(submitButton, false);
       }
     });
   </script>

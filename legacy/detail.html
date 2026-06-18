@@ -521,7 +521,21 @@
       box-shadow: 0 8px 18px rgba(8, 121, 255, 0.24);
     }
 
-    .actions { display: flex; gap: 14px; }
+    .actions { display: flex; gap: 14px; align-items: center; }
+
+    .category-select {
+      width: clamp(140px, 11vw, 180px);
+      height: 40px;
+      padding: 0 34px 0 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(76, 121, 203, 0.14);
+      color: #213b6e;
+      background: rgba(255,255,255,.72);
+      font-size: 14px;
+      font-weight: 850;
+      outline: none;
+    }
+
     .tool-btn {
       height: 40px;
       display: inline-flex;
@@ -711,8 +725,99 @@
       cursor: pointer;
     }
 
+    .op-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 2.2;
+    }
+
     .op-btn:hover {
       background: rgba(0, 104, 255, .10);
+    }
+
+    .op-btn.danger {
+      color: #e04444;
+    }
+
+    .op-btn.danger:hover {
+      background: rgba(224, 68, 68, .12);
+    }
+
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(9, 26, 58, .34);
+    }
+
+    .modal-mask.show {
+      display: flex;
+    }
+
+    .confirm-dialog {
+      width: min(420px, calc(100vw - 48px));
+      padding: 24px 26px 22px;
+      border-radius: 10px;
+      border: 1px solid rgba(63, 121, 213, .18);
+      background: rgba(255, 255, 255, .98);
+      box-shadow: 0 24px 70px rgba(19, 58, 122, .22);
+      color: #13254a;
+    }
+
+    .confirm-title {
+      margin: 0 0 10px;
+      font-size: 18px;
+      line-height: 1.35;
+      font-weight: 950;
+      color: #13254a;
+    }
+
+    .confirm-text {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #53647f;
+    }
+
+    .confirm-name {
+      margin-top: 8px;
+      color: #162f60;
+      font-weight: 850;
+      word-break: break-all;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .confirm-btn {
+      min-width: 82px;
+      height: 34px;
+      border-radius: 7px;
+      border: 1px solid rgba(63, 121, 213, .22);
+      background: #fff;
+      color: #294466;
+      font-size: 14px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .confirm-btn.danger {
+      border-color: #e04444;
+      background: #e04444;
+      color: #fff;
+    }
+
+    .confirm-btn:disabled {
+      opacity: .62;
+      cursor: not-allowed;
     }
 
     .toast {
@@ -842,6 +947,7 @@
       .workspace { grid-template-columns: 190px 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="assets/app-common.css" />
 </head>
 <body>
   <main class="page">
@@ -942,6 +1048,9 @@
             <button class="tab" data-filter="failed">失败 <span id="failedCount">(166)</span></button>
           </div>
           <div class="actions">
+            <select class="category-select" id="categoryFilter" aria-label="按分类筛选">
+              <option value="all">全部分类</option>
+            </select>
             <button class="tool-btn" id="filterBtn" type="button">▽ 筛选</button>
           </div>
         </section>
@@ -990,9 +1099,21 @@
       <button type="button" data-filter-shortcut="indexing">只看索引中</button>
       <button type="button" data-filter-shortcut="failed">只看失败</button>
     </div>
+    <div class="modal-mask" id="deleteModal" aria-hidden="true">
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+        <h2 class="confirm-title" id="deleteTitle">确认删除文件</h2>
+        <p class="confirm-text">删除后该文件将从当前知识库中移除。</p>
+        <p class="confirm-name" id="deleteFileName"></p>
+        <div class="confirm-actions">
+          <button class="confirm-btn" type="button" id="cancelDeleteBtn">取消</button>
+          <button class="confirm-btn danger" type="button" id="confirmDeleteBtn">删除</button>
+        </div>
+      </section>
+    </div>
     <div class="toast" id="toast"></div>
   </main>
 
+  <script src="assets/app-common.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
     const type = params.get("type") || "documents";
@@ -1000,18 +1121,9 @@
     if (!currentUser || !localStorage.getItem("sessionToken")) {
       currentUser = "";
     }
-    const state = { resources: [], filter: "all", page: 1, pageSize: 20 };
-    const currentUserName = document.getElementById("currentUserName");
-    if (currentUserName) currentUserName.textContent = currentUser || "登录";
-
+    const state = { resources: [], base: {}, pendingDelete: null, filter: "all", category: "all", page: 1, pageSize: 20 };
     function apiUrl(path) {
-      const separator = path.includes("?") ? "&" : "?";
-      const token = localStorage.getItem("sessionToken") || "";
-      if (!currentUser || !token) {
-        location.href = "profile.html";
-        return path;
-      }
-      return `${path}${separator}user=${encodeURIComponent(currentUser)}&token=${encodeURIComponent(token)}`;
+      return KnowledgeApp.apiUrl(path);
     }
 
     const pageConfig = {
@@ -1098,6 +1210,43 @@
       document.getElementById("filterPopover").classList.remove("show");
     }
 
+    function openDeleteModal(item) {
+      state.pendingDelete = item;
+      document.getElementById("deleteFileName").textContent = item.title || "该文件";
+      document.getElementById("deleteModal").classList.add("show");
+      document.getElementById("deleteModal").setAttribute("aria-hidden", "false");
+      document.getElementById("confirmDeleteBtn").disabled = false;
+    }
+
+    function closeDeleteModal() {
+      state.pendingDelete = null;
+      document.getElementById("deleteModal").classList.remove("show");
+      document.getElementById("deleteModal").setAttribute("aria-hidden", "true");
+      document.getElementById("confirmDeleteBtn").disabled = false;
+    }
+
+    async function deleteResource(item) {
+      const confirmButton = document.getElementById("confirmDeleteBtn");
+      KnowledgeApp.setButtonLoading(confirmButton, true, "删除中");
+      const response = await fetch(apiUrl(`/api/resources/${encodeURIComponent(item.id)}`), {
+        method: "DELETE"
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        KnowledgeApp.setButtonLoading(confirmButton, false);
+        showToast(data.error || "删除失败");
+        return;
+      }
+      state.resources = state.resources.filter((resource) => String(resource.id) !== String(item.id));
+      const totalPages = Math.max(1, Math.ceil(filteredResources().length / state.pageSize));
+      if (state.page > totalPages) state.page = totalPages;
+      updateCounts(state.base, state.resources);
+      renderRows();
+      closeDeleteModal();
+      KnowledgeApp.setButtonLoading(confirmButton, false);
+      showToast("删除成功");
+    }
+
     function positionPopover(popover, anchor) {
       const rect = anchor.getBoundingClientRect();
       popover.style.top = `${rect.bottom + 8}px`;
@@ -1105,7 +1254,28 @@
     }
 
     function filteredResources() {
-      return state.resources.filter((item) => state.filter === "all" || item.status === state.filter);
+      return state.resources.filter((item) => {
+        const statusMatched = state.filter === "all" || item.status === state.filter;
+        const categoryMatched = state.category === "all" || item.category === state.category;
+        return statusMatched && categoryMatched;
+      });
+    }
+
+    async function loadCategoryFilter() {
+      const select = document.getElementById("categoryFilter");
+      try {
+        const response = await fetch(apiUrl("/api/categories"));
+        if (!response.ok) return;
+        const data = await response.json();
+        const currentValue = select.value;
+        select.innerHTML = '<option value="all">全部分类</option>' + (data.items || [])
+          .map((item) => `<option value="${item.name}">${item.name}</option>`)
+          .join("");
+        select.value = Array.from(select.options).some((option) => option.value === currentValue) ? currentValue : "all";
+        state.category = select.value;
+      } catch (error) {
+        console.warn("Category filter unavailable", error);
+      }
     }
 
     function buildPageItems(current, total) {
@@ -1175,7 +1345,21 @@
           <td>${item.updated_at || ""}</td>
           <td>
             <div class="op">
-              <button class="op-btn" type="button" data-action="download" data-id="${item.id}" title="下载">⇩</button>
+              <button class="op-btn" type="button" data-action="download" data-id="${item.id}" title="下载" aria-label="下载">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 4v11" stroke="currentColor" stroke-linecap="round"/>
+                  <path d="m7 11 5 5 5-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M5 20h14" stroke="currentColor" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <button class="op-btn danger" type="button" data-action="delete" data-id="${item.id}" title="删除" aria-label="删除">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h16" stroke="currentColor" stroke-linecap="round"/>
+                  <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-linecap="round"/>
+                  <path d="M6 7l1 13h10l1-13" stroke="currentColor" stroke-linejoin="round"/>
+                  <path d="M9 7V4h6v3" stroke="currentColor" stroke-linejoin="round"/>
+                </svg>
+              </button>
             </div>
           </td>
         `;
@@ -1185,10 +1369,12 @@
     }
 
     function updateCounts(base, resources) {
-      const total = Number(base.count ?? resources.length);
+      const total = resources.length;
       const indexed = resources.filter((item) => item.status === "indexed").length;
       const indexing = resources.filter((item) => item.status === "indexing").length;
       const failed = resources.filter((item) => item.status === "failed").length;
+      const storageGb = resources.reduce((sum, item) => sum + Number(item.size_mb || 0), 0) / 1024;
+      const indexedRate = total ? Math.round(indexed / total * 100) : 0;
       const today = new Date().toISOString().slice(0, 10);
       const todayUpdated = resources.filter((item) => String(item.updated_at || "").startsWith(today)).length;
       document.getElementById("docCount").textContent = formatCount(total);
@@ -1197,9 +1383,9 @@
       document.getElementById("indexingCount").textContent = `(${formatCount(indexing)})`;
       document.getElementById("failedCount").textContent = `(${formatCount(failed)})`;
       document.getElementById("totalText").textContent = formatCount(total);
-      document.getElementById("indexedRate").textContent = base.progress ?? 0;
-      document.getElementById("storage").textContent = Number(base.storage_gb ?? 0).toFixed(1);
-      document.getElementById("storageNote").textContent = `${Number(base.storage_gb ?? 0).toFixed(1)} GB / 200 GB`;
+      document.getElementById("indexedRate").textContent = indexedRate;
+      document.getElementById("storage").textContent = storageGb.toFixed(1);
+      document.getElementById("storageNote").textContent = `${storageGb.toFixed(1)} GB / 200 GB`;
       document.getElementById("todayUpdated").textContent = todayUpdated;
     }
 
@@ -1231,14 +1417,15 @@
       if (data.currentUser && data.currentUser.name && data.currentUser.name !== currentUser) {
         currentUser = data.currentUser.name;
         localStorage.setItem("currentUser", currentUser);
-        if (currentUserName) currentUserName.textContent = currentUser || "登录";
+        KnowledgeApp.syncCurrentUser(currentUser);
       }
       document.title = `${data.item.title}管理`;
+      state.base = data.item || {};
       state.resources = (data.resources || []).sort((a, b) =>
         String(b.updated_at || "").localeCompare(String(a.updated_at || ""))
       );
       state.page = 1;
-      updateCounts(data.item || {}, state.resources);
+      updateCounts(state.base, state.resources);
       renderRows();
     }
 
@@ -1256,6 +1443,12 @@
       const sizes = [20, 50, 10];
       const currentIndex = sizes.indexOf(state.pageSize);
       state.pageSize = sizes[(currentIndex + 1) % sizes.length];
+      state.page = 1;
+      renderRows();
+    });
+
+    document.getElementById("categoryFilter").addEventListener("change", (event) => {
+      state.category = event.target.value;
       state.page = 1;
       renderRows();
     });
@@ -1287,13 +1480,33 @@
 
       if (button.dataset.action === "download") {
         window.location.href = apiUrl(`/api/resources/${encodeURIComponent(item.id)}/download`);
+        return;
       }
+
+      if (button.dataset.action === "delete") {
+        openDeleteModal(item);
+      }
+    });
+
+    document.getElementById("cancelDeleteBtn").addEventListener("click", closeDeleteModal);
+
+    document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+      if (!state.pendingDelete) return;
+      await deleteResource(state.pendingDelete);
+    });
+
+    document.getElementById("deleteModal").addEventListener("click", (event) => {
+      if (event.target.id === "deleteModal") closeDeleteModal();
     });
 
     document.addEventListener("click", (event) => {
       if (!event.target.closest("#filterBtn, #filterPopover")) {
         closeFloating();
       }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeDeleteModal();
     });
 
     document.getElementById("searchInput").addEventListener("input", async (event) => {
@@ -1310,6 +1523,7 @@
     });
 
     applyPageConfig();
+    loadCategoryFilter();
     loadDocuments();
   </script>
 </body>

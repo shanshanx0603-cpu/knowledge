@@ -99,6 +99,7 @@
     .category-count strong { color:#071a3d; font-size:34px; font-weight:950; margin-right:6px; }
     @media (max-width:1180px) { body { overflow:auto; } .page { min-width:1180px; min-height:760px; } }
   </style>
+  <link rel="stylesheet" href="assets/app-common.css" />
 </head>
 <body>
   <main class="page">
@@ -137,20 +138,12 @@
       </section>
     </section>
   </main>
+  <script src="assets/app-common.js"></script>
   <script>
     let currentUser = localStorage.getItem("currentUser") || "";
     if (!currentUser || !localStorage.getItem("sessionToken")) currentUser = "";
-    const currentUserName = document.getElementById("currentUserName");
-    if (currentUserName) currentUserName.textContent = currentUser || "登录";
-
     function apiUrl(path) {
-      const separator = path.includes("?") ? "&" : "?";
-      const token = localStorage.getItem("sessionToken") || "";
-      if (!currentUser || !token) {
-        location.href = "profile.html";
-        return path;
-      }
-      return `${path}${separator}user=${encodeURIComponent(currentUser)}&token=${encodeURIComponent(token)}`;
+      return KnowledgeApp.apiUrl(path);
     }
 
     function renderCategories(items) {
@@ -173,7 +166,7 @@
       if (data.currentUser && data.currentUser.name && data.currentUser.name !== currentUser) {
         currentUser = data.currentUser.name;
         localStorage.setItem("currentUser", currentUser);
-        if (currentUserName) currentUserName.textContent = currentUser || "登录";
+        KnowledgeApp.syncCurrentUser(currentUser);
       }
       renderCategories(data.items || []);
     }
@@ -182,6 +175,7 @@
       event.preventDefault();
       const message = document.getElementById("message");
       const input = document.getElementById("categoryNameInput");
+      const submitButton = event.currentTarget.querySelector("button");
       const name = input.value.trim();
       message.className = "message";
       message.textContent = "";
@@ -190,6 +184,7 @@
         return;
       }
       try {
+        KnowledgeApp.setButtonLoading(submitButton, true, "添加中");
         const response = await fetch(apiUrl("/api/categories"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -207,6 +202,8 @@
       } catch (error) {
         message.textContent = "分类接口暂时不可用";
         console.warn("Create category failed", error);
+      } finally {
+        KnowledgeApp.setButtonLoading(submitButton, false);
       }
     });
 
