@@ -18,3 +18,19 @@
 知识库系统已启动: http://0.0.0.0:3000/knowledge-dashboard.html
 按 Ctrl+C 停止服务
 [22/Jun/2026 10:41:15] "GET /api/health HTTP/1.1" 200 -
+知识库系统已启动: http://0.0.0.0:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[22/Jun/2026 11:19:17] "GET /api/health HTTP/1.1" 200 -
+知识库系统已启动: http://0.0.0.0:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[22/Jun/2026 11:48:33] "GET /api/health HTTP/1.1" 200 -
+知识库系统已启动: http://0.0.0.0:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[22/Jun/2026 13:36:09] "GET /api/health HTTP/1.1" 200 -
+知识库系统已启动: http://0.0.0.0:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[22/Jun/2026 13:37:44] "GET /api/health HTTP/1.1" 200 -
+[22/Jun/2026 13:37:44] "HEAD /knowledge-dashboard.html HTTP/1.1" 200 -
+知识库系统已启动: http://0.0.0.0:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[22/Jun/2026 15:06:43] "GET /api/health HTTP/1.1" 200 -

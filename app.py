@@ -63,7 +63,7 @@ RAG_STATUS_PROGRESS = {
     "failed": 100,
 }
 RAG_STATUS_TEXT = {
-    "pending": "RAG任务已提交",
+    "pending": "等待RAG回调",
     "manifesting": "下载与清单生成中",
     "converting": "转换Markdown中",
     "cleaning": "清洗中",
@@ -310,16 +310,18 @@ def rag_webhook_url(resource_id=None):
     return f"{callback_base_url()}{path}"
 
 
-def create_rag_preprocess_task(kb_type, file_urls, resource_id=None):
+def create_rag_preprocess_task(kb_type, file_urls, resource_id=None, bucket_name="", index_name=""):
     if not file_urls:
         return None
+    bucket_name = str(bucket_name or RAG_PREPROCESS_BUCKET).strip()
+    index_name = str(index_name or rag_index_for_type(kb_type)).strip()
     payload = {
         "type": "rag-preprocess",
         "tenant": RAG_PREPROCESS_TENANT,
         "source": RAG_PREPROCESS_SOURCE,
         "user_id": str(resource_id or ""),
-        "bucket": RAG_PREPROCESS_BUCKET,
-        "index": rag_index_for_type(kb_type),
+        "bucket": bucket_name,
+        "index": index_name,
         "file_urls": file_urls,
         "callback_url": rag_webhook_url(resource_id),
         "options": {
@@ -329,6 +331,8 @@ def create_rag_preprocess_task(kb_type, file_urls, resource_id=None):
         "metadata": {
             "resource_id": resource_id,
             "knowledge_base_type": kb_type,
+            "owner": bucket_name,
+            "category": index_name,
         },
     }
     return rag_request("/api/rag-preprocess", method="POST", payload=payload)
@@ -339,6 +343,7 @@ def update_resource_from_rag_task(conn, resource_id, task):
         return
     rag_status = task.get("status") or "pending"
     status, status_text, progress = rag_status_payload(rag_status)
+    summary = task.get("summary") or ""
     conn.execute(
         """
         UPDATE resources
@@ -354,16 +359,54 @@ def update_resource_from_rag_task(conn, resource_id, task):
         """,
         (
             status,
-            task.get("summary") or status_text,
+            status_text,
             progress,
             rag_status,
-            task.get("summary") or "",
+            summary,
             task.get("result_json") or "",
             task.get("error") or "",
             now_text(),
             resource_id,
         ),
     )
+
+
+def normalize_rag_webhook_payload(data):
+    if not isinstance(data, dict):
+        return None, "请求体必须是 JSON 对象"
+    event = str(data.get("event") or "").strip()
+    status = str(data.get("status") or "").strip()
+    if event not in {"completed", "failed"}:
+        return None, "event 必须为 completed 或 failed"
+    if status not in {"completed", "failed"}:
+        return None, "status 必须为 completed 或 failed"
+    if event != status:
+        return None, "event 与 status 不一致"
+
+    summary = data.get("summary")
+    result_json = data.get("result_json")
+    error = data.get("error")
+    if status == "completed":
+        if error:
+            return None, "completed 回调的 error 必须为空"
+        if summary is not None and not isinstance(summary, str):
+            return None, "summary 必须为字符串或 null"
+        if result_json is not None and not isinstance(result_json, str):
+            return None, "result_json 必须为 JSON 字符串或 null"
+    if status == "failed":
+        if not isinstance(error, str) or not error.strip():
+            return None, "failed 回调必须包含 error"
+        if summary is not None:
+            return None, "failed 回调的 summary 必须为 null"
+        if result_json is not None:
+            return None, "failed 回调的 result_json 必须为 null"
+
+    return {
+        "status": status,
+        "summary": summary or "",
+        "result_json": result_json or "",
+        "error": error or "",
+    }, ""
 
 
 def safe_filename(filename):
@@ -547,13 +590,15 @@ def init_db():
             ("oss_object_key", "VARCHAR(500)"),
             ("rag_task_id", "VARCHAR(80)"),
             ("rag_status", "VARCHAR(40)"),
-            ("rag_summary", "VARCHAR(500)"),
+            ("rag_summary", "TEXT"),
             ("rag_result_json", "TEXT"),
             ("rag_error", "TEXT"),
         ]
         for column, column_type in resource_migrations:
             if column not in existing_resource_columns:
                 conn.execute(f"ALTER TABLE resources ADD COLUMN {column} {column_type}")
+            elif column == "rag_summary":
+                conn.execute("ALTER TABLE resources MODIFY COLUMN rag_summary TEXT")
 
         existing_user_columns = {
             row["Field"] for row in conn.execute("SHOW COLUMNS FROM users").fetchall()
@@ -1394,12 +1439,9 @@ class AppHandler(BaseHTTPRequestHandler):
         if not resource_id and not task_id:
             return self.send_json({"error": "缺少 resource_id 或 task_id"}, 400)
 
-        task = {
-            "status": data.get("status") or data.get("event") or "pending",
-            "summary": data.get("summary") or "",
-            "result_json": data.get("result_json") if isinstance(data.get("result_json"), str) else json.dumps(data.get("result_json") or data.get("result") or {}, ensure_ascii=False),
-            "error": data.get("error") or "",
-        }
+        task, validation_error = normalize_rag_webhook_payload(data)
+        if validation_error:
+            return self.send_json({"ok": False, "error": validation_error}, 400)
         with connect_db() as conn:
             resource = None
             if task_id:
@@ -1591,7 +1633,13 @@ class AppHandler(BaseHTTPRequestHandler):
             resource_id = result.lastrowid
             if oss_url:
                 try:
-                    rag_task = create_rag_preprocess_task(kb_type, [oss_url], resource_id)
+                    rag_task = create_rag_preprocess_task(
+                        kb_type,
+                        [oss_url],
+                        resource_id,
+                        bucket_name=owner,
+                        index_name=category,
+                    )
                     rag_task_id = rag_task.get("task_id") or rag_task.get("id") or ""
                     rag_status = rag_task.get("status") or "pending"
                     rag_summary = rag_task.get("summary") or RAG_STATUS_TEXT.get(rag_status, "RAG任务已提交")
@@ -1622,9 +1670,9 @@ class AppHandler(BaseHTTPRequestHandler):
                         ),
                     )
                 except Exception as exc:
-                    rag_status = "failed"
+                    rag_status = "pending"
                     rag_error = str(exc)
-                    status, status_text, progress = rag_status_payload(rag_status)
+                    status, status_text, progress = rag_status_payload(rag_status, "RAG任务提交中")
                     conn.execute(
                         """
                         UPDATE resources
