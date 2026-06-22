@@ -297,6 +297,9 @@
       text-decoration: none;
       cursor: pointer;
       box-shadow: 0 10px 22px rgba(19, 120, 255, 0.20);
+      white-space: nowrap;
+      min-width: 118px;
+      flex: 0 0 auto;
     }
 
     .link-btn {
@@ -561,7 +564,7 @@
             </div>
             <div class="actions">
               <span class="message" id="message"></span>
-              <a class="link-btn" id="detailLink" href="overview.html">返回概览</a>
+              <a class="link-btn" id="detailLink" href="overview.html">返回</a>
               <button class="submit-btn" type="submit">开始上传</button>
             </div>
           </form>
@@ -726,7 +729,7 @@
         document.getElementById("detailLink").href = typeList.length === 1
           ? `detail.html?type=${encodeURIComponent(typeList[0])}`
           : "overview.html";
-        document.getElementById("detailLink").textContent = typeList.length === 1 ? "查看知识库" : "查看概览";
+        document.getElementById("detailLink").textContent = typeList.length === 1 ? "查看知识库" : "返回";
       } catch (error) {
         message.className = "message";
         message.textContent = "上传接口暂时不可用";
