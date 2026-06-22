@@ -5,3 +5,16 @@
 按 Ctrl+C 停止服务
 [17/Jun/2026 17:52:30] "GET /api/health HTTP/1.1" 200 -
 [17/Jun/2026 17:52:30] "POST /api/login HTTP/1.1" 200 -
+知识库系统已启动: http://127.0.0.1:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[18/Jun/2026 16:24:35] "GET /api/health HTTP/1.1" 200 -
+知识库系统已启动: http://127.0.0.1:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[18/Jun/2026 16:28:02] "GET /api/health HTTP/1.1" 200 -
+[18/Jun/2026 16:28:02] "POST /api/login HTTP/1.1" 200 -
+知识库系统已启动: http://127.0.0.1:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[18/Jun/2026 17:21:31] "GET /api/health HTTP/1.1" 200 -
+知识库系统已启动: http://0.0.0.0:3000/knowledge-dashboard.html
+按 Ctrl+C 停止服务
+[22/Jun/2026 10:41:15] "GET /api/health HTTP/1.1" 200 -

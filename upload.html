@@ -688,6 +688,7 @@
         KnowledgeApp.setButtonLoading(submitBtn, true, "上传中");
         const uploadedTypes = new Set();
         const uploadedUrls = [];
+        const ragTasks = [];
         const titleValue = document.getElementById("titleInput").value.trim();
         const selectedType = document.getElementById("typeSelect").value;
         const categoryValue = categoryInput.value;
@@ -713,11 +714,14 @@
           }
           if (data.resource && data.resource.type) uploadedTypes.add(data.resource.type);
           if (data.resource && data.resource.url) uploadedUrls.push(data.resource.url);
+          if (data.resource && data.resource.rag_task_id) {
+            ragTasks.push(`${data.resource.rag_task_id}（${data.resource.rag_status || "pending"}）`);
+          }
         }
         message.className = "message success";
         message.textContent = uploadedUrls.length === 1
-          ? `上传成功，文件地址：${uploadedUrls[0]}`
-          : `上传成功，已加入知识库（${selectedFiles.length} 个文件，已返回 OSS 文件地址）`;
+          ? `上传成功，文件地址：${uploadedUrls[0]}${ragTasks.length ? `，RAG任务：${ragTasks[0]}` : ""}`
+          : `上传成功，已加入知识库（${selectedFiles.length} 个文件，已返回 OSS 文件地址${ragTasks.length ? "和RAG任务" : ""}）`;
         const typeList = Array.from(uploadedTypes);
         document.getElementById("detailLink").href = typeList.length === 1
           ? `detail.html?type=${encodeURIComponent(typeList[0])}`

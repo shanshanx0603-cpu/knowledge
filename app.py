@@ -7,6 +7,8 @@ import re
 import shutil
 import time
 import urllib.parse
+import urllib.error
+import urllib.request
 import uuid
 import cgi
 import datetime
@@ -26,7 +28,16 @@ OSS_ACCESS_KEY_SECRET = os.getenv("OSS_ACCESS_KEY_SECRET", "")
 OSS_ENDPOINT = os.getenv("OSS_ENDPOINT", "")
 OSS_UPLOAD_BUCKET = os.getenv("OSS_UPLOAD_BUCKET", "knowledge-center-upload")
 OSS_DOWNLOAD_EXPIRES = int(os.getenv("OSS_DOWNLOAD_EXPIRES", "3600"))
-HOST = "127.0.0.1"
+RAG_PREPROCESS_BASE_URL = os.getenv("RAG_PREPROCESS_BASE_URL", "http://192.168.2.18:3000").rstrip("/")
+RAG_PREPROCESS_TENANT = os.getenv("RAG_PREPROCESS_TENANT", "knowledge")
+RAG_PREPROCESS_SOURCE = os.getenv("RAG_PREPROCESS_SOURCE", "knowledge")
+RAG_PREPROCESS_BUCKET = os.getenv("RAG_PREPROCESS_BUCKET", "liu-teacher-618-v2")
+RAG_PREPROCESS_TIMEOUT = int(os.getenv("RAG_PREPROCESS_TIMEOUT", "8"))
+RAG_TRANSCRIBE_MEDIA = os.getenv("RAG_TRANSCRIBE_MEDIA", "false").lower() in {"1", "true", "yes", "on"}
+RAG_MEDIA_MODEL = os.getenv("RAG_MEDIA_MODEL", "tiny")
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "")
+WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", PUBLIC_BASE_URL)
+HOST = os.getenv("HOST", "0.0.0.0")
 PORT = 3000
 ADMIN_ACCOUNT = "admin"
 ADMIN_PASSWORD = "Shan1234"
@@ -35,6 +46,33 @@ DEFAULT_USER_ACCOUNT = "刘耀光"
 DEFAULT_USER_PASSWORD = "liuyaoguang123"
 TOKEN_SALT = "knowledge-admin-session"
 DEFAULT_CATEGORIES = ["课程资料", "学习资料", "个人资料"]
+RAG_INDEX_BY_TYPE = {
+    "documents": "course",
+    "videos": "video",
+    "images": "product",
+}
+RAG_STATUS_PROGRESS = {
+    "pending": 5,
+    "manifesting": 15,
+    "converting": 35,
+    "cleaning": 50,
+    "chunking": 68,
+    "validating": 82,
+    "embedding": 92,
+    "completed": 100,
+    "failed": 100,
+}
+RAG_STATUS_TEXT = {
+    "pending": "RAG任务已提交",
+    "manifesting": "下载与清单生成中",
+    "converting": "转换Markdown中",
+    "cleaning": "清洗中",
+    "chunking": "切块中",
+    "validating": "校验中",
+    "embedding": "向量入库中",
+    "completed": "RAG预处理完成",
+    "failed": "RAG预处理失败",
+}
 _DATABASE_READY = False
 
 
@@ -202,13 +240,6 @@ def oss_bucket_client(bucket_name):
 def ensure_upload_bucket():
     if not oss_enabled():
         return ""
-    bucket = oss_bucket_client(OSS_UPLOAD_BUCKET)
-    try:
-        bucket.create_bucket()
-    except Exception as exc:
-        message = str(exc)
-        if "BucketAlreadyOwnedByYou" not in message and "BucketAlreadyExists" not in message:
-            raise
     return OSS_UPLOAD_BUCKET
 
 
@@ -227,6 +258,112 @@ def delete_oss_object(resource):
     if not oss_enabled():
         raise RuntimeError("OSS 未配置，无法删除远程文件")
     oss_bucket_client(bucket_name).delete_object(object_key)
+
+
+def rag_index_for_type(kb_type):
+    return RAG_INDEX_BY_TYPE.get(kb_type, "course")
+
+
+def rag_status_payload(status, fallback_text=""):
+    status = status or "indexing"
+    if status == "completed":
+        return "indexed", RAG_STATUS_TEXT["completed"], 100
+    if status == "failed":
+        return "failed", RAG_STATUS_TEXT["failed"], 100
+    return "indexing", RAG_STATUS_TEXT.get(status, fallback_text or "RAG预处理中"), RAG_STATUS_PROGRESS.get(status, 10)
+
+
+def rag_request(path, method="GET", payload=None):
+    url = f"{RAG_PREPROCESS_BASE_URL}{path}"
+    data = None
+    headers = {}
+    if payload is not None:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(request, timeout=RAG_PREPROCESS_TIMEOUT) as response:
+        raw = response.read().decode("utf-8")
+        return json.loads(raw) if raw else {}
+
+
+def local_ip_address():
+    try:
+        import socket
+        rag_host = urllib.parse.urlparse(RAG_PREPROCESS_BASE_URL).hostname or "8.8.8.8"
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect((rag_host, 80))
+            return sock.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
+
+def callback_base_url():
+    base_url = WEBHOOK_BASE_URL.strip().rstrip("/")
+    if base_url:
+        return base_url
+    host = local_ip_address()
+    return f"http://{host}:{PORT}"
+
+
+def rag_webhook_url(resource_id=None):
+    path = "/api/rag-preprocess/webhook"
+    return f"{callback_base_url()}{path}"
+
+
+def create_rag_preprocess_task(kb_type, file_urls, resource_id=None):
+    if not file_urls:
+        return None
+    payload = {
+        "type": "rag-preprocess",
+        "tenant": RAG_PREPROCESS_TENANT,
+        "source": RAG_PREPROCESS_SOURCE,
+        "user_id": str(resource_id or ""),
+        "bucket": RAG_PREPROCESS_BUCKET,
+        "index": rag_index_for_type(kb_type),
+        "file_urls": file_urls,
+        "callback_url": rag_webhook_url(resource_id),
+        "options": {
+            "transcribe_media": RAG_TRANSCRIBE_MEDIA,
+            "media_model": RAG_MEDIA_MODEL,
+        },
+        "metadata": {
+            "resource_id": resource_id,
+            "knowledge_base_type": kb_type,
+        },
+    }
+    return rag_request("/api/rag-preprocess", method="POST", payload=payload)
+
+
+def update_resource_from_rag_task(conn, resource_id, task):
+    if not task:
+        return
+    rag_status = task.get("status") or "pending"
+    status, status_text, progress = rag_status_payload(rag_status)
+    conn.execute(
+        """
+        UPDATE resources
+        SET status = %s,
+            status_text = %s,
+            progress = %s,
+            rag_status = %s,
+            rag_summary = %s,
+            rag_result_json = %s,
+            rag_error = %s,
+            updated_at = %s
+        WHERE id = %s
+        """,
+        (
+            status,
+            task.get("summary") or status_text,
+            progress,
+            rag_status,
+            task.get("summary") or "",
+            task.get("result_json") or "",
+            task.get("error") or "",
+            now_text(),
+            resource_id,
+        ),
+    )
 
 
 def safe_filename(filename):
@@ -345,6 +482,11 @@ def init_db():
               oss_bucket VARCHAR(120),
               oss_endpoint VARCHAR(200),
               oss_object_key VARCHAR(500),
+              rag_task_id VARCHAR(80),
+              rag_status VARCHAR(40),
+              rag_summary VARCHAR(500),
+              rag_result_json TEXT,
+              rag_error TEXT,
               created_at VARCHAR(30) NOT NULL,
               updated_at VARCHAR(30) NOT NULL,
               FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id)
@@ -403,6 +545,11 @@ def init_db():
             ("oss_bucket", "VARCHAR(120)"),
             ("oss_endpoint", "VARCHAR(200)"),
             ("oss_object_key", "VARCHAR(500)"),
+            ("rag_task_id", "VARCHAR(80)"),
+            ("rag_status", "VARCHAR(40)"),
+            ("rag_summary", "VARCHAR(500)"),
+            ("rag_result_json", "TEXT"),
+            ("rag_error", "TEXT"),
         ]
         for column, column_type in resource_migrations:
             if column not in existing_resource_columns:
@@ -932,6 +1079,8 @@ class AppHandler(BaseHTTPRequestHandler):
             return self.create_category(params)
         if parsed.path == "/api/upload":
             return self.upload_file(params)
+        if parsed.path == "/api/rag-preprocess/webhook":
+            return self.rag_preprocess_webhook(params)
         if parsed.path == "/api/knowledge-bases":
             return self.create_knowledge_base(params)
         if parsed.path == "/api/resources":
@@ -1232,6 +1381,46 @@ class AppHandler(BaseHTTPRequestHandler):
             log_operation(conn, current_user, "create_category", "category", created["id"], name)
         return self.send_json({"ok": True, "item": created}, 201)
 
+    def rag_preprocess_webhook(self, params):
+        data = self.read_json()
+        metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+        resource_id = (
+            data.get("resource_id")
+            or data.get("resourceId")
+            or metadata.get("resource_id")
+            or ""
+        )
+        task_id = data.get("task_id") or data.get("id") or data.get("taskId") or ""
+        if not resource_id and not task_id:
+            return self.send_json({"error": "缺少 resource_id 或 task_id"}, 400)
+
+        task = {
+            "status": data.get("status") or data.get("event") or "pending",
+            "summary": data.get("summary") or "",
+            "result_json": data.get("result_json") if isinstance(data.get("result_json"), str) else json.dumps(data.get("result_json") or data.get("result") or {}, ensure_ascii=False),
+            "error": data.get("error") or "",
+        }
+        with connect_db() as conn:
+            resource = None
+            if task_id:
+                resource = row_to_dict(conn.execute("SELECT * FROM resources WHERE rag_task_id = %s", (task_id,)).fetchone())
+            if resource is None and resource_id:
+                resource = row_to_dict(conn.execute("SELECT * FROM resources WHERE id = %s", (resource_id,)).fetchone())
+            if resource is None:
+                return self.send_json({"error": "未找到对应资源"}, 404)
+            if task_id and not resource.get("rag_task_id"):
+                conn.execute("UPDATE resources SET rag_task_id = %s WHERE id = %s", (task_id, resource["id"]))
+            update_resource_from_rag_task(conn, resource["id"], task)
+            log_operation(
+                conn,
+                {"name": "RAG回调", "account_type": "system"},
+                "rag_webhook",
+                "resource",
+                resource["id"],
+                f"{task.get('status')} / {task_id}",
+            )
+        return self.send_json({"ok": True})
+
     def login(self):
         data = self.read_json()
         account = str(data.get("account", "")).strip()
@@ -1336,6 +1525,11 @@ class AppHandler(BaseHTTPRequestHandler):
         oss_endpoint = ""
         oss_key = ""
         oss_url = ""
+        rag_task_id = ""
+        rag_status = ""
+        rag_summary = ""
+        rag_result_json = ""
+        rag_error = ""
         stored_path = str(target_path.relative_to(BASE_DIR))
 
         with connect_db() as conn:
@@ -1345,24 +1539,27 @@ class AppHandler(BaseHTTPRequestHandler):
             owner = form.getfirst("owner", "").strip() if is_admin(current_user) else ""
             owner = owner or current_user["name"]
             if oss_enabled():
-                oss_bucket_name = ensure_upload_bucket()
-                oss_key = oss_object_key(stored_name, current_user["id"])
-                bucket = oss_bucket_client(oss_bucket_name)
-                bucket.put_object_from_file(oss_key, str(target_path))
-                storage_provider = "oss"
-                oss_endpoint = OSS_ENDPOINT
-                oss_url = f"https://{oss_bucket_name}.{urllib.parse.urlparse(OSS_ENDPOINT).netloc}/{urllib.parse.quote(oss_key)}"
-                stored_path = ""
                 try:
+                    oss_bucket_name = ensure_upload_bucket()
+                    oss_key = oss_object_key(stored_name, current_user["id"])
+                    bucket = oss_bucket_client(oss_bucket_name)
+                    bucket.put_object_from_file(oss_key, str(target_path))
+                    storage_provider = "oss"
+                    oss_endpoint = OSS_ENDPOINT
+                    oss_url = f"https://{oss_bucket_name}.{urllib.parse.urlparse(OSS_ENDPOINT).netloc}/{urllib.parse.quote(oss_key)}"
+                    stored_path = ""
                     target_path.unlink()
-                except OSError:
-                    pass
+                except Exception as exc:
+                    return self.send_json({"error": f"OSS 上传失败：{exc}"}, 500)
+                rag_status = "pending"
+                rag_summary = RAG_STATUS_TEXT["pending"]
+            status, status_text, progress = rag_status_payload(rag_status, "已索引") if rag_status else ("indexed", "已索引", 100)
             created_at = now_text()
             result = conn.execute(
                 """
                 INSERT INTO resources
-                  (knowledge_base_id, title, content, file_type, size_mb, owner, category, status, status_text, progress, stored_path, mime_type, storage_provider, oss_bucket, oss_endpoint, oss_object_key, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                  (knowledge_base_id, title, content, file_type, size_mb, owner, category, status, status_text, progress, stored_path, mime_type, storage_provider, oss_bucket, oss_endpoint, oss_object_key, rag_task_id, rag_status, rag_summary, rag_result_json, rag_error, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     base["id"],
@@ -1372,33 +1569,88 @@ class AppHandler(BaseHTTPRequestHandler):
                     size_mb,
                     owner,
                     category,
-                    "indexed",
-                    "已索引",
-                    100,
+                    status,
+                    rag_summary or status_text,
+                    progress,
                     stored_path,
                     mime_type,
                     storage_provider,
                     oss_bucket_name,
                     oss_endpoint,
                     oss_key,
+                    rag_task_id,
+                    rag_status,
+                    rag_summary,
+                    rag_result_json,
+                    rag_error,
                     created_at,
                     created_at,
                 ),
             )
             sync_knowledge_base_summary(conn, base["id"])
+            resource_id = result.lastrowid
+            if oss_url:
+                try:
+                    rag_task = create_rag_preprocess_task(kb_type, [oss_url], resource_id)
+                    rag_task_id = rag_task.get("task_id") or rag_task.get("id") or ""
+                    rag_status = rag_task.get("status") or "pending"
+                    rag_summary = rag_task.get("summary") or RAG_STATUS_TEXT.get(rag_status, "RAG任务已提交")
+                    status, status_text, progress = rag_status_payload(rag_status)
+                    conn.execute(
+                        """
+                        UPDATE resources
+                        SET status = %s,
+                            status_text = %s,
+                            progress = %s,
+                            rag_task_id = %s,
+                            rag_status = %s,
+                            rag_summary = %s,
+                            rag_error = %s,
+                            updated_at = %s
+                        WHERE id = %s
+                        """,
+                        (
+                            status,
+                            rag_summary or status_text,
+                            progress,
+                            rag_task_id,
+                            rag_status,
+                            rag_summary,
+                            "",
+                            now_text(),
+                            resource_id,
+                        ),
+                    )
+                except Exception as exc:
+                    rag_status = "failed"
+                    rag_error = str(exc)
+                    status, status_text, progress = rag_status_payload(rag_status)
+                    conn.execute(
+                        """
+                        UPDATE resources
+                        SET status = %s,
+                            status_text = %s,
+                            progress = %s,
+                            rag_status = %s,
+                            rag_error = %s,
+                            updated_at = %s
+                        WHERE id = %s
+                        """,
+                        (status, status_text, progress, rag_status, rag_error, now_text(), resource_id),
+                    )
             log_operation(
                 conn,
                 current_user,
                 "upload",
                 "resource",
-                result.lastrowid,
+                resource_id,
                 oss_url or f"{title} / {category}",
             )
         return self.send_json(
             {
                 "ok": True,
                 "resource": {
-                    "id": result.lastrowid,
+                    "id": resource_id,
                     "title": title,
                     "type": kb_type,
                     "file_type": ext,
@@ -1410,6 +1662,10 @@ class AppHandler(BaseHTTPRequestHandler):
                     "oss_bucket": oss_bucket_name,
                     "oss_object_key": oss_key,
                     "url": oss_url,
+                    "rag_task_id": rag_task_id,
+                    "rag_status": rag_status,
+                    "rag_summary": rag_summary,
+                    "rag_error": rag_error,
                 },
             },
             201,
