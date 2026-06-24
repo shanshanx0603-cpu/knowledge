@@ -1,2 +1,3 @@
 pymysql>=1.1.1
 oss2>=2.18.0
+alibabacloud-oss-v2>=1.3.1

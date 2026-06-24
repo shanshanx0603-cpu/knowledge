@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 对话 - 知识库中台</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      color: #17233d;
+      background: #eef4fb;
+    }
+    .page { min-height: 100vh; padding: 18px; }
+    header {
+      height: var(--app-header-height);
+      display: grid;
+      grid-template-columns: 190px 1fr 180px;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .brand { display: flex; align-items: center; text-decoration: none; }
+    .brand-logo { width: 158px; height: auto; display: block; }
+    .title {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 700;
+      color: #113b73;
+      letter-spacing: 0;
+      text-align: center;
+    }
+    .user {
+      justify-self: end;
+      height: 42px;
+      min-width: 142px;
+      padding: 0 12px;
+      border-radius: 8px;
+      background: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: #284263;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(49, 86, 128, .12);
+    }
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4aa6ff, #1f6fd6);
+    }
+    .chev {
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid #7489a6;
+      border-bottom: 2px solid #7489a6;
+      transform: rotate(45deg);
+      margin-left: auto;
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 16px;
+      min-height: calc(100vh - 106px);
+    }
+    .side {
+      background: #fff;
+      padding: 18px 12px;
+      box-shadow: 0 16px 36px rgba(51, 85, 128, .12);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .nav { display: grid; gap: 8px; }
+    .nav a,
+    .upload {
+      height: 44px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #536b8d;
+      text-decoration: none;
+      font-size: 15px;
+      border-radius: 8px;
+    }
+    .nav a svg,
+    .upload svg { width: 19px; height: 19px; flex: 0 0 auto; }
+    .nav a.active {
+      color: #0069ff;
+      background: linear-gradient(90deg, rgba(0, 111, 255, .1), rgba(0, 111, 255, .02));
+      box-shadow: inset 3px 0 0 #0b72ff;
+    }
+    .main {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 14px;
+    }
+    .toolbar {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 12px 28px rgba(51, 85, 128, .1);
+    }
+    .crumb { color: #7890ad; font-size: 14px; }
+    .selectors { display: flex; align-items: center; gap: 10px; }
+    .selectors select,
+    .selectors input {
+      height: 34px;
+      border: 1px solid #d7e3f2;
+      border-radius: 6px;
+      padding: 0 10px;
+      color: #24415f;
+      background: #f8fbff;
+      outline: none;
+    }
+    .chat-shell {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 14px;
+    }
+    .conversation,
+    .sources {
+      min-height: 0;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 16px 36px rgba(51, 85, 128, .12);
+    }
+    .conversation {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+    .messages {
+      min-height: 0;
+      overflow: auto;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .message-row { display: flex; }
+    .message-row.user { justify-content: flex-end; }
+    .bubble {
+      max-width: min(760px, 78%);
+      padding: 13px 15px;
+      border-radius: 8px;
+      line-height: 1.65;
+      font-size: 15px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .assistant .bubble {
+      background: #f4f8fc;
+      color: #223b5b;
+      border: 1px solid #e1ebf6;
+    }
+    .user .bubble {
+      color: #fff;
+      background: #176bdb;
+    }
+    .composer {
+      padding: 14px;
+      border-top: 1px solid #e4edf7;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px;
+      gap: 10px;
+    }
+    .composer textarea {
+      min-height: 48px;
+      max-height: 130px;
+      resize: vertical;
+      border: 1px solid #d9e5f3;
+      border-radius: 8px;
+      padding: 12px;
+      outline: none;
+      font: inherit;
+      line-height: 1.5;
+      color: #1c3656;
+      background: #fbfdff;
+    }
+    .composer button {
+      height: 48px;
+      border: 0;
+      border-radius: 8px;
+      color: #fff;
+      background: #0b72ff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sources {
+      padding: 16px;
+      overflow: auto;
+    }
+    .sources h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      color: #163b68;
+    }
+    .source-list { display: grid; gap: 10px; }
+    .source-item {
+      border: 1px solid #e2ebf6;
+      border-radius: 8px;
+      padding: 11px;
+      background: #f9fbfe;
+    }
+    .source-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #214464;
+      margin-bottom: 7px;
+      overflow-wrap: anywhere;
+    }
+    .source-text {
+      max-height: 118px;
+      overflow: auto;
+      color: #5c718d;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    .empty {
+      color: #8094ad;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .page { min-width: 1180px; min-height: 760px; }
+    }
+  </style>
+  <link rel="stylesheet" href="assets/app-common.css" />
+</head>
+<body>
+  <main class="page">
+    <header>
+      <a class="brand" href="knowledge-dashboard.html">
+        <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
+      </a>
+      <h1 class="title"><span>知识库中台</span></h1>
+      <a class="user" href="profile.html">
+        <span class="avatar"></span>
+        <span id="currentUserName">个人中心</span>
+        <span class="chev"></span>
+      </a>
+    </header>
+
+    <section class="workspace">
+      <aside class="side">
+        <nav class="nav"></nav>
+        <a class="upload" href="upload.html"></a>
+      </aside>
+
+      <section class="main">
+        <div class="toolbar">
+          <div class="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;AI 对话</div>
+          <div class="selectors">
+            <select id="categorySelect">
+              <option value="课程资料">课程资料</option>
+              <option value="学习资料">学习资料</option>
+              <option value="个人资料">个人资料</option>
+            </select>
+            <input id="bucketInput" placeholder="向量 Bucket" value="" />
+          </div>
+        </div>
+
+        <section class="chat-shell">
+          <section class="conversation">
+            <div class="messages" id="messages">
+              <div class="message-row assistant">
+                <div class="bubble">你好，我可以基于知识库内容回答问题。你可以问我课程适合对象、方案内容、实施流程等。</div>
+              </div>
+            </div>
+            <form class="composer" id="chatForm">
+              <textarea id="messageInput" placeholder="输入问题，按 Enter 发送，Shift + Enter 换行"></textarea>
+              <button id="sendButton" type="submit">发送</button>
+            </form>
+          </section>
+
+          <aside class="sources">
+            <h2>引用来源</h2>
+            <div class="source-list" id="sourceList">
+              <div class="empty">发送问题后，这里会显示召回的知识库片段。</div>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="assets/app-common.js"></script>
+  <script>
+    const messagesNode = document.getElementById("messages");
+    const sourceList = document.getElementById("sourceList");
+    const form = document.getElementById("chatForm");
+    const input = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+    const bucketInput = document.getElementById("bucketInput");
+    const categorySelect = document.getElementById("categorySelect");
+    const history = [];
+
+    async function applyUserVectorTarget() {
+      try {
+        const response = await fetch(KnowledgeApp.apiUrl("/api/profile"));
+        const data = await response.json();
+        const user = data.user || {};
+        bucketInput.value = user.vector_bucket || "liu-teacher-618-v2";
+        const editable = user.account_type === "admin";
+        bucketInput.readOnly = !editable;
+      } catch (error) {
+        bucketInput.value = "liu-teacher-618-v2";
+        bucketInput.readOnly = true;
+      }
+    }
+
+    async function loadCategories() {
+      try {
+        const response = await fetch(KnowledgeApp.apiUrl("/api/categories"));
+        const data = await response.json();
+        const items = data.items || [];
+        if (!items.length) return;
+        categorySelect.innerHTML = items.map((item) => `<option value="${item.name}">${item.name}</option>`).join("");
+      } catch (error) {
+        categorySelect.value = "课程资料";
+      }
+    }
+
+    function appendMessage(role, content) {
+      const row = document.createElement("div");
+      row.className = `message-row ${role}`;
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = content;
+      row.appendChild(bubble);
+      messagesNode.appendChild(row);
+      messagesNode.scrollTop = messagesNode.scrollHeight;
+      return bubble;
+    }
+
+    function renderSources(sources) {
+      sourceList.innerHTML = "";
+      if (!sources || !sources.length) {
+        sourceList.innerHTML = '<div class="empty">本次没有召回到来源片段。</div>';
+        return;
+      }
+      sources.forEach((source, index) => {
+        const item = document.createElement("div");
+        item.className = "source-item";
+        const title = document.createElement("div");
+        title.className = "source-title";
+        title.textContent = `[${index + 1}] ${source.title || source.key || "未命名片段"}`;
+        const text = document.createElement("div");
+        text.className = "source-text";
+        text.textContent = source.chunk_text || JSON.stringify(source.metadata || {}, null, 2);
+        item.append(title, text);
+        sourceList.appendChild(item);
+      });
+    }
+
+    async function sendMessage(message) {
+      appendMessage("user", message);
+      history.push({ role: "user", content: message });
+      const pending = appendMessage("assistant", "正在检索知识库...");
+      KnowledgeApp.setButtonLoading(sendButton, true, "发送");
+      try {
+        const response = await fetch(KnowledgeApp.apiUrl("/api/chat"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message,
+            history,
+            top_k: 6,
+            bucket: bucketInput.value.trim(),
+            category: categorySelect.value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "AI 对话失败");
+        pending.textContent = data.answer || "没有生成回答。";
+        history.push({ role: "assistant", content: pending.textContent });
+        renderSources(data.sources || []);
+      } catch (error) {
+        pending.textContent = `调用失败：${error.message}`;
+        renderSources([]);
+      } finally {
+        KnowledgeApp.setButtonLoading(sendButton, false);
+      }
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message) return;
+      input.value = "";
+      sendMessage(message);
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    applyUserVectorTarget();
+    loadCategories();
+  </script>
+</body>
+</html>

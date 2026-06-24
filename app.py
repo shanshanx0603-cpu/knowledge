@@ -18,6 +18,24 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
+
+
+def load_local_env(path):
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_local_env(BASE_DIR / ".env")
+
 MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
 MYSQL_USER = os.getenv("MYSQL_USER", "root")
@@ -35,6 +53,15 @@ RAG_PREPROCESS_BUCKET = os.getenv("RAG_PREPROCESS_BUCKET", "liu-teacher-618-v2")
 RAG_PREPROCESS_TIMEOUT = int(os.getenv("RAG_PREPROCESS_TIMEOUT", "8"))
 RAG_TRANSCRIBE_MEDIA = os.getenv("RAG_TRANSCRIBE_MEDIA", "false").lower() in {"1", "true", "yes", "on"}
 RAG_MEDIA_MODEL = os.getenv("RAG_MEDIA_MODEL", "tiny")
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-v4")
+CHAT_MODEL = os.getenv("CHAT_MODEL", "qwen-plus")
+OSS_VECTOR_REGION = os.getenv("OSS_VECTOR_REGION", "cn-hangzhou")
+OSS_VECTOR_ENDPOINT = os.getenv("OSS_VECTOR_ENDPOINT", "")
+OSS_VECTOR_ACCOUNT_ID = os.getenv("OSS_VECTOR_ACCOUNT_ID", "")
+OSS_VECTOR_BUCKET = os.getenv("OSS_VECTOR_BUCKET", RAG_PREPROCESS_BUCKET)
+OSS_VECTOR_INDEX = os.getenv("OSS_VECTOR_INDEX", "course")
+RAG_SEARCH_TOP_K = int(os.getenv("RAG_SEARCH_TOP_K", "6"))
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "")
 WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", PUBLIC_BASE_URL)
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -46,6 +73,11 @@ DEFAULT_USER_ACCOUNT = "刘耀光"
 DEFAULT_USER_PASSWORD = "liuyaoguang123"
 TOKEN_SALT = "knowledge-admin-session"
 DEFAULT_CATEGORIES = ["课程资料", "学习资料", "个人资料"]
+CATEGORY_INDEX_OVERRIDES = {
+    "课程资料": "kechengziliao",
+    "学习资料": "xuexiziliao",
+    "个人资料": "gerenziliao",
+}
 RAG_INDEX_BY_TYPE = {
     "documents": "course",
     "videos": "video",
@@ -286,6 +318,182 @@ def rag_request(path, method="GET", payload=None):
         return json.loads(raw) if raw else {}
 
 
+def require_env(names):
+    missing = [name for name in names if not os.getenv(name, "")]
+    if missing:
+        raise RuntimeError(f"缺少环境变量: {', '.join(missing)}")
+
+
+def dashscope_request(path, payload, timeout=30):
+    require_env(["DASHSCOPE_API_KEY"])
+    url = f"https://dashscope.aliyuncs.com/compatible-mode/v1{path}"
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")
+        raise RuntimeError(f"DashScope 调用失败: HTTP {exc.code} {detail[:500]}") from exc
+
+
+def embed_text(text):
+    text = str(text or "").strip()
+    if not text:
+        raise RuntimeError("检索问题不能为空")
+    payload = {
+        "model": EMBEDDING_MODEL,
+        "input": text,
+        "encoding_format": "float",
+    }
+    data = dashscope_request("/embeddings", payload)
+    items = data.get("data") or []
+    if not items or not items[0].get("embedding"):
+        raise RuntimeError("DashScope 未返回 embedding")
+    return items[0]["embedding"]
+
+
+def chat_completion(messages):
+    payload = {
+        "model": CHAT_MODEL,
+        "messages": messages,
+        "temperature": 0.2,
+    }
+    data = dashscope_request("/chat/completions", payload, timeout=60)
+    choices = data.get("choices") or []
+    if not choices:
+        raise RuntimeError("DashScope 未返回聊天结果")
+    return choices[0].get("message", {}).get("content", "").strip()
+
+
+def oss_vector_client():
+    require_env(["OSS_ACCESS_KEY_ID", "OSS_ACCESS_KEY_SECRET", "OSS_VECTOR_ACCOUNT_ID"])
+    try:
+        import alibabacloud_oss_v2 as oss
+        import alibabacloud_oss_v2.vectors as oss_vectors
+        from alibabacloud_oss_v2 import credentials
+    except ImportError as exc:
+        raise RuntimeError("缺少 alibabacloud-oss-v2，请先运行: python3 -m pip install -r requirements.txt") from exc
+    provider = credentials.StaticCredentialsProvider(
+        os.getenv("OSS_ACCESS_KEY_ID", ""),
+        os.getenv("OSS_ACCESS_KEY_SECRET", ""),
+        os.getenv("OSS_SESSION_TOKEN") or None,
+    )
+    config = oss.config.load_default()
+    config.region = OSS_VECTOR_REGION
+    config.account_id = OSS_VECTOR_ACCOUNT_ID
+    config.credentials_provider = provider
+    if OSS_VECTOR_ENDPOINT:
+        config.endpoint = OSS_VECTOR_ENDPOINT
+    return oss_vectors.Client(config), oss_vectors
+
+
+def vector_query(query, top_k=None, bucket=None, index_name=None, filter_payload=None):
+    vector = embed_text(query)
+    client, oss_vectors = oss_vector_client()
+    result = client.query_vectors(
+        oss_vectors.models.QueryVectorsRequest(
+            bucket=bucket or OSS_VECTOR_BUCKET,
+            index_name=index_name or OSS_VECTOR_INDEX,
+            query_vector={"float32": vector},
+            filter=filter_payload or None,
+            return_distance=True,
+            return_metadata=True,
+            top_k=int(top_k or RAG_SEARCH_TOP_K),
+        )
+    )
+    return result.vectors or []
+
+
+def vector_target_for_user(user, requested_bucket="", requested_index="", category=""):
+    if is_admin(user):
+        bucket = requested_bucket or (user or {}).get("vector_bucket") or OSS_VECTOR_BUCKET
+        index_name = requested_index or index_for_category(category)
+    else:
+        bucket = (user or {}).get("vector_bucket") or default_vector_bucket_for_user(user) or OSS_VECTOR_BUCKET
+        index_name = index_for_category(category)
+    return {
+        "bucket": str(bucket).strip(),
+        "index": str(index_name).strip(),
+    }
+
+
+def metadata_value(metadata, names, default=""):
+    if not isinstance(metadata, dict):
+        return default
+    for name in names:
+        value = metadata.get(name)
+        if value is not None and value != "":
+            return value
+    return default
+
+
+def normalize_vector_hit(hit, resource_lookup=None):
+    metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
+    resource_id = str(metadata_value(metadata, ["resource_id", "resourceId", "resourceID", "rid"], "") or "")
+    resource = resource_lookup.get(resource_id) if resource_lookup and resource_id else None
+    title = metadata_value(metadata, ["title", "file", "filename", "source_file", "source"], "")
+    chunk_text = metadata_value(
+        metadata,
+        ["chunk_text", "chunkText", "text", "content", "page_content", "markdown", "raw_text"],
+        "",
+    )
+    return {
+        "key": hit.get("key") or hit.get("id") or "",
+        "resource_id": resource_id,
+        "title": title or (resource or {}).get("title", ""),
+        "chunk_text": chunk_text,
+        "distance": hit.get("distance"),
+        "score": hit.get("score"),
+        "metadata": metadata,
+        "resource": resource,
+    }
+
+
+def visible_resource_lookup(conn, user, resource_ids):
+    ids = [str(item) for item in resource_ids if str(item or "").isdigit()]
+    if not ids:
+        return {}
+    owner_sql, owner_args = owner_clause(user, "r")
+    placeholders = ", ".join(["%s"] * len(ids))
+    rows = conn.execute(
+        f"""
+        SELECT r.*, k.type AS knowledge_base_type, k.title AS knowledge_base_title
+        FROM resources r
+        JOIN knowledge_bases k ON k.id = r.knowledge_base_id
+        WHERE r.id IN ({placeholders})
+        {owner_sql}
+        """,
+        ids + owner_args,
+    ).fetchall()
+    return {str(row["id"]): row_to_dict(row) for row in rows}
+
+
+def build_rag_context(hits, max_chars=6000):
+    parts = []
+    used = 0
+    for idx, hit in enumerate(hits, 1):
+        text = (hit.get("chunk_text") or "").strip()
+        if not text:
+            continue
+        source = hit.get("title") or hit.get("key") or f"片段{idx}"
+        block = f"[{idx}] 来源：{source}\n{text}"
+        if used + len(block) > max_chars:
+            break
+        parts.append(block)
+        used += len(block)
+    return "\n\n".join(parts)
+
+
 def local_ip_address():
     try:
         import socket
@@ -415,6 +623,48 @@ def safe_filename(filename):
     return name or "upload.bin"
 
 
+def slugify_pinyin(value, fallback="user"):
+    value = str(value or "").strip()
+    try:
+        from pypinyin import lazy_pinyin
+        source = "".join(lazy_pinyin(value))
+    except Exception:
+        source = value
+    slug = re.sub(r"[^a-z0-9]+", "", source.lower())
+    return slug or fallback
+
+
+def default_vector_bucket_for_user(user):
+    if not user:
+        return OSS_VECTOR_BUCKET
+    return slugify_pinyin(user.get("name") or user.get("login_account") or f"user{user.get('id', '')}")
+
+
+def index_for_category(category, fallback=OSS_VECTOR_INDEX):
+    category = str(category or "").strip()
+    if not category:
+        return fallback
+    return CATEGORY_INDEX_OVERRIDES.get(category) or slugify_pinyin(category, fallback)
+
+
+def ensure_user_vector_targets(conn):
+    users = [row_to_dict(row) for row in conn.execute("SELECT * FROM users ORDER BY id").fetchall()]
+    for user in users:
+        if is_admin(user):
+            bucket = user.get("vector_bucket") or OSS_VECTOR_BUCKET
+        else:
+            bucket = user.get("vector_bucket") or default_vector_bucket_for_user(user)
+        conn.execute(
+            """
+            UPDATE users
+            SET vector_bucket = %s,
+                vector_index = NULL
+            WHERE id = %s
+            """,
+            (bucket, user["id"]),
+        )
+
+
 def file_extension(filename):
     suffix = Path(filename or "").suffix.lower().lstrip(".")
     return suffix or "bin"
@@ -490,6 +740,8 @@ def init_db():
               login_account VARCHAR(80),
               password_hash VARCHAR(128),
               oss_bucket VARCHAR(120),
+              vector_bucket VARCHAR(120),
+              vector_index VARCHAR(120),
               status VARCHAR(40) NOT NULL DEFAULT '正常',
               permission_scope VARCHAR(80) NOT NULL DEFAULT '全库管理',
               last_login VARCHAR(30) NOT NULL
@@ -611,6 +863,10 @@ def init_db():
             conn.execute("ALTER TABLE users ADD COLUMN password_hash VARCHAR(128)")
         if "oss_bucket" not in existing_user_columns:
             conn.execute("ALTER TABLE users ADD COLUMN oss_bucket VARCHAR(120)")
+        if "vector_bucket" not in existing_user_columns:
+            conn.execute("ALTER TABLE users ADD COLUMN vector_bucket VARCHAR(120)")
+        if "vector_index" not in existing_user_columns:
+            conn.execute("ALTER TABLE users ADD COLUMN vector_index VARCHAR(120)")
 
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         if user_count == 0:
@@ -670,6 +926,8 @@ def init_db():
                     (DEFAULT_USER_ACCOUNT, hash_password(DEFAULT_USER_PASSWORD), DEFAULT_USER_NAME),
                 )
             conn.execute("UPDATE resources SET owner = %s WHERE owner IN ('张三', '李四', '王五')", (DEFAULT_USER_NAME,))
+
+        ensure_user_vector_targets(conn)
 
         kb_count = conn.execute("SELECT COUNT(*) FROM knowledge_bases").fetchone()[0]
         if kb_count == 0:
@@ -819,7 +1077,7 @@ def public_user(user, include_token=False):
     public = {
         key: value
         for key, value in user.items()
-        if key not in ("password_hash",)
+        if key not in ("password_hash", "vector_index")
     }
     if include_token:
         public["sessionToken"] = session_token(user)
@@ -1043,6 +1301,15 @@ def dashboard_payload(user=None):
     }
 
 
+class FastThreadingHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        self.socket.bind(self.server_address)
+        self.server_address = self.socket.getsockname()
+        host, port = self.server_address[:2]
+        self.server_name = host
+        self.server_port = port
+
+
 class AppHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print("[%s] %s" % (self.log_date_time_string(), fmt % args))
@@ -1126,6 +1393,10 @@ class AppHandler(BaseHTTPRequestHandler):
             return self.upload_file(params)
         if parsed.path == "/api/rag-preprocess/webhook":
             return self.rag_preprocess_webhook(params)
+        if parsed.path == "/api/rag-search":
+            return self.rag_search(params)
+        if parsed.path == "/api/chat":
+            return self.chat(params)
         if parsed.path == "/api/knowledge-bases":
             return self.create_knowledge_base(params)
         if parsed.path == "/api/resources":
@@ -1331,6 +1602,116 @@ class AppHandler(BaseHTTPRequestHandler):
                 rows = []
         return self.send_json({"query": query, "items": rows, "currentUser": public_user(current_user)})
 
+    def rag_search(self, params):
+        data = self.read_json()
+        query = str(data.get("query") or data.get("message") or "").strip()
+        top_k = int(data.get("top_k") or data.get("topK") or RAG_SEARCH_TOP_K)
+        top_k = max(1, min(top_k, 20))
+        requested_bucket = str(data.get("bucket") or "").strip()
+        requested_index = str(data.get("index") or data.get("index_name") or "").strip()
+        category = str(data.get("category") or "").strip()
+        filter_payload = data.get("filter") if isinstance(data.get("filter"), dict) else None
+        if not query:
+            return self.send_json({"error": "请输入检索问题"}, 400)
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            target = vector_target_for_user(current_user, requested_bucket, requested_index, category)
+            bucket = target["bucket"]
+            index_name = target["index"]
+            try:
+                raw_hits = vector_query(query, top_k=top_k, bucket=bucket, index_name=index_name, filter_payload=filter_payload)
+            except Exception as exc:
+                return self.send_json({"error": str(exc)}, 500)
+            metadata_ids = [
+                metadata_value(hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}, ["resource_id", "resourceId", "resourceID", "rid"], "")
+                for hit in raw_hits
+            ]
+            resource_lookup = visible_resource_lookup(conn, current_user, metadata_ids)
+            hits = []
+            for raw_hit in raw_hits:
+                hit = normalize_vector_hit(raw_hit, resource_lookup)
+                if hit.get("resource_id") and hit["resource_id"] not in resource_lookup:
+                    continue
+                hits.append(hit)
+            log_operation(conn, current_user, "rag_search", "vector", "", query)
+        return self.send_json({
+            "query": query,
+            "bucket": bucket,
+            "index": index_name,
+            "hits": hits,
+            "currentUser": public_user(current_user),
+        })
+
+    def chat(self, params):
+        data = self.read_json()
+        message = str(data.get("message") or data.get("query") or "").strip()
+        if not message:
+            return self.send_json({"error": "请输入对话内容"}, 400)
+        history = data.get("history") if isinstance(data.get("history"), list) else []
+        top_k = int(data.get("top_k") or data.get("topK") or RAG_SEARCH_TOP_K)
+        top_k = max(1, min(top_k, 12))
+        requested_bucket = str(data.get("bucket") or "").strip()
+        requested_index = str(data.get("index") or data.get("index_name") or "").strip()
+        category = str(data.get("category") or "").strip()
+        filter_payload = data.get("filter") if isinstance(data.get("filter"), dict) else None
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            target = vector_target_for_user(current_user, requested_bucket, requested_index, category)
+            bucket = target["bucket"]
+            index_name = target["index"]
+            try:
+                raw_hits = vector_query(message, top_k=top_k, bucket=bucket, index_name=index_name, filter_payload=filter_payload)
+            except Exception as exc:
+                return self.send_json({"error": str(exc)}, 500)
+            metadata_ids = [
+                metadata_value(hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}, ["resource_id", "resourceId", "resourceID", "rid"], "")
+                for hit in raw_hits
+            ]
+            resource_lookup = visible_resource_lookup(conn, current_user, metadata_ids)
+            hits = []
+            for raw_hit in raw_hits:
+                hit = normalize_vector_hit(raw_hit, resource_lookup)
+                if hit.get("resource_id") and hit["resource_id"] not in resource_lookup:
+                    continue
+                hits.append(hit)
+            context = build_rag_context(hits)
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "你是知识库中台的AI助手。请优先基于给定知识库片段回答；"
+                        "如果片段不足以回答，请明确说明资料中没有足够依据。"
+                        "回答要简洁，并在涉及资料结论时标注引用编号，如[1]。"
+                    ),
+                }
+            ]
+            for item in history[-8:]:
+                role = item.get("role")
+                content = str(item.get("content") or "").strip()
+                if role in {"user", "assistant"} and content:
+                    messages.append({"role": role, "content": content[:2000]})
+            messages.append({
+                "role": "user",
+                "content": f"知识库片段：\n{context or '未召回到可用片段。'}\n\n用户问题：{message}",
+            })
+            try:
+                answer = chat_completion(messages)
+            except Exception as exc:
+                return self.send_json({"error": str(exc), "sources": hits}, 500)
+            conn.execute("INSERT INTO calls (endpoint, created_at) VALUES (%s, %s)", ("/api/chat", now_text()))
+            log_operation(conn, current_user, "chat", "vector", "", message)
+        return self.send_json({
+            "answer": answer,
+            "sources": hits,
+            "bucket": bucket,
+            "index": index_name,
+            "currentUser": public_user(current_user),
+        })
+
     def list_operation_logs(self, params):
         with connect_db() as conn:
             current_user = self.require_user(conn, params)
@@ -1499,12 +1880,13 @@ class AppHandler(BaseHTTPRequestHandler):
             ).fetchone()
             if exists:
                 return self.send_json({"error": "该用户名已存在"}, 409)
+            vector_bucket = default_vector_bucket_for_user({"name": username, "login_account": username})
             conn.execute(
                 """
-                INSERT INTO users (name, role, account_type, login_account, password_hash, status, permission_scope, last_login)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO users (name, role, account_type, login_account, password_hash, vector_bucket, status, permission_scope, last_login)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (username, "普通用户", "user", username, hash_password(password), "正常", "仅本人上传", time.strftime("%Y-%m-%d")),
+                (username, "普通用户", "user", username, hash_password(password), vector_bucket, "正常", "仅本人上传", time.strftime("%Y-%m-%d")),
             )
             user = row_to_dict(
                 conn.execute("SELECT * FROM users WHERE login_account = %s", (username,)).fetchone()
@@ -1633,12 +2015,16 @@ class AppHandler(BaseHTTPRequestHandler):
             resource_id = result.lastrowid
             if oss_url:
                 try:
+                    vector_user = row_to_dict(
+                        conn.execute("SELECT * FROM users WHERE name = %s", (owner,)).fetchone()
+                    ) or current_user
+                    vector_target = vector_target_for_user(vector_user, category=category)
                     rag_task = create_rag_preprocess_task(
                         kb_type,
                         [oss_url],
                         resource_id,
-                        bucket_name=owner,
-                        index_name=category,
+                        bucket_name=vector_target["bucket"],
+                        index_name=vector_target["index"],
                     )
                     rag_task_id = rag_task.get("task_id") or rag_task.get("id") or ""
                     rag_status = rag_task.get("status") or "pending"
@@ -1825,7 +2211,7 @@ class AppHandler(BaseHTTPRequestHandler):
 
 def main():
     init_db()
-    server = ThreadingHTTPServer((HOST, PORT), AppHandler)
+    server = FastThreadingHTTPServer((HOST, PORT), AppHandler)
     print(f"知识库系统已启动: http://{HOST}:{PORT}/knowledge-dashboard.html")
     print("按 Ctrl+C 停止服务")
     server.serve_forever()
