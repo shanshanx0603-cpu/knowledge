@@ -7,6 +7,12 @@
       icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" stroke="currentColor" stroke-width="2"/></svg>'
     },
     {
+      key: "categories",
+      href: "categories.html",
+      text: "分类管理",
+      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'
+    },
+    {
       key: "documents",
       href: "detail.html?type=documents",
       text: "文档知识库",
@@ -25,15 +31,9 @@
       icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m7 17 4-5 3 3.5 2-2.5 2 4H7Z" fill="currentColor"/></svg>'
     },
     {
-      key: "categories",
-      href: "categories.html",
-      text: "分类管理",
-      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'
-    },
-    {
       key: "chat",
       href: "chat.html",
-      text: "AI 对话",
+      text: "知识库调试",
       icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 5.8A3.8 3.8 0 0 1 8.8 2h6.4A3.8 3.8 0 0 1 19 5.8v5.4a3.8 3.8 0 0 1-3.8 3.8H11l-4.6 4v-4.2A3.8 3.8 0 0 1 5 11.2V5.8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8h6M9 11h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
     }
   ];

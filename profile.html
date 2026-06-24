@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>登录管理</title>
+  <title>个人中心</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -18,6 +18,7 @@
       color: #071a3d;
       font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
     }
+    .profile-shell,
     .login-shell {
       width: min(92vw, 460px);
       padding: 30px;
@@ -25,6 +26,9 @@
       border: 1px solid rgba(80, 132, 220, 0.18);
       background: rgba(255, 255, 255, 0.84);
       box-shadow: 0 26px 70px rgba(34, 93, 178, 0.18);
+    }
+    .profile-shell {
+      width: min(92vw, 560px);
     }
     .brand {
       display: flex;
@@ -50,31 +54,6 @@
       font-weight: 750;
       line-height: 1.7;
     }
-    .mode-tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 18px;
-      padding: 5px;
-      border-radius: 12px;
-      background: rgba(239, 246, 255, 0.78);
-      border: 1px solid rgba(72, 128, 224, 0.12);
-    }
-    .mode-tab {
-      height: 36px;
-      border: 0;
-      border-radius: 9px;
-      background: transparent;
-      color: #40577d;
-      font-size: 13px;
-      font-weight: 950;
-      cursor: pointer;
-    }
-    .mode-tab.active {
-      color: #fff;
-      background: linear-gradient(145deg, #1378ff, #006dff);
-      box-shadow: 0 8px 18px rgba(19, 120, 255, 0.18);
-    }
     form {
       display: grid;
       gap: 14px;
@@ -98,7 +77,9 @@
       font-weight: 800;
       outline: none;
     }
-    .login-btn {
+    .login-btn,
+    .logout-btn,
+    .back-btn {
       height: 44px;
       margin-top: 6px;
       border: 0;
@@ -109,6 +90,30 @@
       font-weight: 950;
       cursor: pointer;
       box-shadow: 0 12px 26px rgba(19, 120, 255, 0.22);
+    }
+    .logout-btn {
+      width: 100%;
+      margin-top: 18px;
+      background: linear-gradient(145deg, #ff5f5f, #e83d3d);
+      box-shadow: 0 12px 26px rgba(232, 61, 61, 0.18);
+    }
+    .back-btn {
+      width: 100%;
+      height: 52px;
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #006dff);
+      text-decoration: none;
+      font-size: 16px;
+      letter-spacing: 0;
+      box-shadow: 0 14px 30px rgba(19, 120, 255, 0.22);
+    }
+    .back-btn:hover {
+      filter: brightness(1.03);
+      transform: translateY(-1px);
     }
     .hint {
       color: #607293;
@@ -135,20 +140,147 @@
       font-weight: 800;
       line-height: 1.7;
     }
+    .profile-card {
+      display: grid;
+      gap: 16px;
+      margin-top: 22px;
+    }
+    .profile-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    .profile-head h1 {
+      margin-top: 0;
+    }
+    .profile-head .sub {
+      margin-bottom: 0;
+    }
+    .profile-head .logout-btn {
+      width: auto;
+      min-width: 118px;
+      margin-top: 0;
+      padding: 0 18px;
+      flex: 0 0 auto;
+    }
+    .info-row {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr);
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(239, 246, 255, 0.78);
+      border: 1px solid rgba(72, 128, 224, 0.12);
+    }
+    .info-label {
+      color: #607293;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .info-value {
+      min-width: 0;
+      color: #092253;
+      font-size: 15px;
+      font-weight: 950;
+      overflow-wrap: anywhere;
+    }
+    .profile-loading {
+      margin-top: 20px;
+      color: #607293;
+      font-size: 14px;
+      font-weight: 850;
+    }
+    .admin-panel {
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 14px;
+      background: rgba(246, 250, 255, 0.86);
+      border: 1px solid rgba(72, 128, 224, 0.14);
+    }
+    .admin-panel h2 {
+      margin: 0 0 8px;
+      color: #092253;
+      font-size: 20px;
+      font-weight: 950;
+    }
+    .admin-panel .sub {
+      margin-bottom: 16px;
+    }
+    .create-user-btn {
+      height: 44px;
+      border: 0;
+      border-radius: 9px;
+      color: #fff;
+      background: linear-gradient(145deg, #1378ff, #006dff);
+      font-size: 15px;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 12px 26px rgba(19, 120, 255, 0.22);
+    }
   </style>
   <link rel="stylesheet" href="assets/app-common.css" />
 </head>
 <body>
-  <main class="login-shell">
+  <main class="profile-shell hidden" id="profileView">
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
+    </div>
+    <div class="profile-head">
+      <div>
+        <h1>个人信息</h1>
+        <p class="sub">当前登录账号信息如下。退出登录后会返回登录管理页面。</p>
+      </div>
+      <button class="logout-btn" id="logoutButton" type="button">退出登录</button>
+    </div>
+    <div class="profile-card">
+      <div class="info-row">
+        <span class="info-label">用户名</span>
+        <span class="info-value" id="profileName">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">账号类型</span>
+        <span class="info-value" id="profileType">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">权限范围</span>
+        <span class="info-value" id="profileScope">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">向量 Bucket</span>
+        <span class="info-value" id="profileBucket">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">最近登录</span>
+        <span class="info-value" id="profileLastLogin">-</span>
+      </div>
+    </div>
+    <section class="admin-panel hidden" id="adminPanel">
+      <h2>账号分配</h2>
+      <p class="sub">仅管理员可以创建普通用户账号。用户名需为中文，密码需为英文和数字组合，至少 8 个字符。</p>
+      <form id="createUserForm">
+        <label>
+          新用户姓名
+          <input id="newAccount" autocomplete="off" placeholder="请输入中文用户名" />
+        </label>
+        <label>
+          初始密码
+          <input id="newPassword" autocomplete="new-password" type="password" placeholder="请输入英文+数字密码" />
+        </label>
+        <div class="message" id="createUserMessage"></div>
+        <button class="create-user-btn" id="createUserButton" type="submit">创建账号</button>
+      </form>
+    </section>
+    <a class="back-btn" href="overview.html">进入首页</a>
+  </main>
+
+  <main class="login-shell hidden" id="loginView">
     <div class="brand">
       <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
     </div>
     <h1>登录管理</h1>
     <p class="sub">请输入账号密码进入知识库中台。管理员可查看全部内容，普通用户仅查看自己上传的文件。</p>
-    <div class="mode-tabs" role="tablist" aria-label="登录注册切换">
-      <button class="mode-tab active" id="loginTab" type="button">登录</button>
-      <button class="mode-tab" id="registerTab" type="button">注册</button>
-    </div>
     <form id="loginForm">
       <label>
         用户名
@@ -158,45 +290,73 @@
         密码
         <input id="password" autocomplete="current-password" type="password" placeholder="请输入密码" />
       </label>
-      <label id="confirmWrap" class="hidden">
-        确认密码
-        <input id="confirmPassword" autocomplete="new-password" type="password" placeholder="请再次输入密码" />
-      </label>
-      <div id="registerHint" class="hint hidden">注册用户名必须为中文；密码必须为英文+数字组合，且至少 8 个字符。</div>
       <div class="message" id="message"></div>
       <button class="login-btn" type="submit">登录</button>
     </form>
-    <div class="meta">当前已配置账号：管理员 admin；用户可自行注册中文用户名账号。</div>
+    <div class="meta">当前仅支持管理员分配账号。管理员账号：admin。</div>
   </main>
 
   <script src="assets/app-common.js"></script>
   <script>
     localStorage.removeItem("adminToken");
-    let authMode = "login";
+    const profileView = document.getElementById("profileView");
+    const loginView = document.getElementById("loginView");
     const form = document.getElementById("loginForm");
     const accountInput = document.getElementById("account");
     const passwordInput = document.getElementById("password");
-    const confirmInput = document.getElementById("confirmPassword");
-    const confirmWrap = document.getElementById("confirmWrap");
-    const registerHint = document.getElementById("registerHint");
-    const loginTab = document.getElementById("loginTab");
-    const registerTab = document.getElementById("registerTab");
     const submitButton = document.querySelector(".login-btn");
     const message = document.getElementById("message");
+    const logoutButton = document.getElementById("logoutButton");
+    const adminPanel = document.getElementById("adminPanel");
+    const createUserForm = document.getElementById("createUserForm");
+    const newAccountInput = document.getElementById("newAccount");
+    const newPasswordInput = document.getElementById("newPassword");
+    const createUserMessage = document.getElementById("createUserMessage");
+    const createUserButton = document.getElementById("createUserButton");
 
-    function setMode(mode) {
-      authMode = mode;
-      const registering = mode === "register";
-      loginTab.classList.toggle("active", !registering);
-      registerTab.classList.toggle("active", registering);
-      confirmWrap.classList.toggle("hidden", !registering);
-      registerHint.classList.toggle("hidden", !registering);
-      submitButton.textContent = registering ? "注册并登录" : "登录";
-      passwordInput.autocomplete = registering ? "new-password" : "current-password";
-      accountInput.placeholder = registering ? "请输入中文用户名" : "请输入用户名";
-      passwordInput.placeholder = registering ? "请输入英文+数字密码" : "请输入密码";
-      message.className = "message";
-      message.textContent = "";
+    function clearLoginState() {
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("sessionToken");
+      localStorage.removeItem("adminToken");
+    }
+
+    function showLoginView() {
+      profileView.classList.add("hidden");
+      loginView.classList.remove("hidden");
+    }
+
+    function showProfileView(user) {
+      loginView.classList.add("hidden");
+      profileView.classList.remove("hidden");
+      document.getElementById("profileName").textContent = user.name || user.login_account || "-";
+      document.getElementById("profileType").textContent = user.account_type === "admin" ? "管理员" : "普通用户";
+      document.getElementById("profileScope").textContent = user.permission_scope || (user.account_type === "admin" ? "全部知识库" : "仅本人上传");
+      document.getElementById("profileBucket").textContent = user.vector_bucket || "-";
+      document.getElementById("profileLastLogin").textContent = user.last_login || "-";
+      adminPanel.classList.toggle("hidden", user.account_type !== "admin");
+    }
+
+    async function loadProfile() {
+      const currentUser = localStorage.getItem("currentUser") || "";
+      const token = localStorage.getItem("sessionToken") || "";
+      if (!currentUser || !token) {
+        showLoginView();
+        return;
+      }
+      try {
+        const response = await fetch(KnowledgeApp.apiUrl("/api/profile"));
+        const data = await response.json();
+        if (!response.ok || !data.user) {
+          clearLoginState();
+          showLoginView();
+          return;
+        }
+        localStorage.setItem("currentUser", data.user.name);
+        showProfileView(data.user);
+      } catch (error) {
+        console.warn("Profile unavailable", error);
+        showLoginView();
+      }
     }
 
     function validChineseUsername(value) {
@@ -207,32 +367,15 @@
       return /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(value);
     }
 
-    loginTab.addEventListener("click", () => setMode("login"));
-    registerTab.addEventListener("click", () => setMode("register"));
-
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       message.className = "message";
       message.textContent = "";
       const account = accountInput.value.trim();
       const password = passwordInput.value;
-      if (authMode === "register") {
-        if (!validChineseUsername(account)) {
-          message.textContent = "用户名必须为 2-20 个中文字符";
-          return;
-        }
-        if (!validPassword(password)) {
-          message.textContent = "密码必须为英文+数字组合，且至少 8 个字符";
-          return;
-        }
-        if (password !== confirmInput.value) {
-          message.textContent = "两次输入的密码不一致";
-          return;
-        }
-      }
       try {
-        KnowledgeApp.setButtonLoading(submitButton, true, authMode === "register" ? "注册中" : "登录中");
-        const response = await fetch(authMode === "register" ? "/api/register" : "/api/login", {
+        KnowledgeApp.setButtonLoading(submitButton, true, "登录中");
+        const response = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -245,18 +388,68 @@
           message.textContent = data.error || "登录失败";
           return;
         }
-        localStorage.setItem("currentUser", data.user.name);
-        localStorage.setItem("sessionToken", data.user.sessionToken);
-        message.className = "message success";
-        message.textContent = authMode === "register" ? "注册成功" : "登录成功";
-        location.href = "overview.html";
+		        localStorage.setItem("currentUser", data.user.name);
+		        localStorage.setItem("sessionToken", data.user.sessionToken);
+		        message.className = "message success";
+		        message.textContent = "登录成功";
+		        showProfileView(data.user);
       } catch (error) {
-        message.textContent = authMode === "register" ? "注册接口暂时不可用" : "登录接口暂时不可用";
+        message.textContent = "登录接口暂时不可用";
         console.warn("Login failed", error);
       } finally {
         KnowledgeApp.setButtonLoading(submitButton, false);
       }
+	    });
+
+    logoutButton.addEventListener("click", () => {
+      clearLoginState();
+      accountInput.value = "";
+      passwordInput.value = "";
+      adminPanel.classList.add("hidden");
+      message.className = "message success";
+      message.textContent = "已退出登录";
+      showLoginView();
     });
-  </script>
+
+    createUserForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      createUserMessage.className = "message";
+      createUserMessage.textContent = "";
+      const account = newAccountInput.value.trim();
+      const password = newPasswordInput.value;
+      if (!validChineseUsername(account)) {
+        createUserMessage.textContent = "用户名必须为 2-20 个中文字符";
+        return;
+      }
+      if (!validPassword(password)) {
+        createUserMessage.textContent = "密码必须为英文+数字组合，且至少 8 个字符";
+        return;
+      }
+      try {
+        KnowledgeApp.setButtonLoading(createUserButton, true, "创建中");
+        const response = await fetch(KnowledgeApp.apiUrl("/api/users"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ account, password })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          createUserMessage.textContent = data.error || "创建账号失败";
+          return;
+        }
+        createUserMessage.className = "message success";
+        createUserMessage.textContent = `账号 ${data.user.name} 创建成功`;
+        newAccountInput.value = "";
+        newPasswordInput.value = "";
+      } catch (error) {
+        createUserMessage.textContent = "账号创建接口暂时不可用";
+        console.warn("Create user failed", error);
+      } finally {
+        KnowledgeApp.setButtonLoading(createUserButton, false);
+      }
+    });
+
+    loadProfile();
+	  </script>
 </body>
 </html>

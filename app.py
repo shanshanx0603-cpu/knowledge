@@ -427,6 +427,48 @@ def vector_target_for_user(user, requested_bucket="", requested_index="", catego
     }
 
 
+def vector_indexes_for_categories(categories):
+    indexes = []
+    seen = set()
+    for category in categories:
+        index_name = index_for_category(category)
+        if index_name and index_name not in seen:
+            indexes.append(index_name)
+            seen.add(index_name)
+    return indexes or [OSS_VECTOR_INDEX]
+
+
+def vector_query_for_target(query, top_k, bucket, index_name, category="", filter_payload=None):
+    if category != "__all__":
+        return vector_query(query, top_k=top_k, bucket=bucket, index_name=index_name, filter_payload=filter_payload)
+    hits = []
+    for each_index in vector_indexes_for_categories(DEFAULT_CATEGORIES):
+        try:
+            for hit in vector_query(query, top_k=top_k, bucket=bucket, index_name=each_index, filter_payload=filter_payload):
+                item = dict(hit)
+                metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+                item["metadata"] = {**metadata, "_vector_index": each_index}
+                hits.append(item)
+        except Exception:
+            continue
+    def rank_key(hit):
+        distance = hit.get("distance")
+        if distance is not None:
+            try:
+                return (0, float(distance))
+            except (TypeError, ValueError):
+                pass
+        score = hit.get("score")
+        if score is not None:
+            try:
+                return (1, -float(score))
+            except (TypeError, ValueError):
+                pass
+        return (2, 0)
+    hits.sort(key=rank_key)
+    return hits[:top_k]
+
+
 def metadata_value(metadata, names, default=""):
     if not isinstance(metadata, dict):
         return default
@@ -437,23 +479,57 @@ def metadata_value(metadata, names, default=""):
     return default
 
 
+def clean_source_url(value):
+    value = str(value or "").strip()
+    if value.startswith(("http://", "https://", "/api/")):
+        return value
+    return ""
+
+
+def display_name_from_url(value):
+    value = str(value or "").strip()
+    if not value.startswith(("http://", "https://")):
+        return value
+    parsed = urllib.parse.urlparse(value)
+    name = Path(urllib.parse.unquote(parsed.path or "")).name
+    return name or value
+
+
 def normalize_vector_hit(hit, resource_lookup=None):
     metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
     resource_id = str(metadata_value(metadata, ["resource_id", "resourceId", "resourceID", "rid"], "") or "")
     resource = resource_lookup.get(resource_id) if resource_lookup and resource_id else None
-    title = metadata_value(metadata, ["title", "file", "filename", "source_file", "source"], "")
+    title = metadata_value(metadata, ["title", "filename", "file_name", "file", "source_file", "source"], "")
     chunk_text = metadata_value(
         metadata,
-        ["chunk_text", "chunkText", "text", "content", "page_content", "markdown", "raw_text"],
+        ["chunk_text", "chunkText", "snippet", "text", "content", "page_content", "markdown", "raw_text"],
         "",
     )
+    source_url = clean_source_url(metadata_value(metadata, ["source_url", "sourceUrl", "source_file", "sourceFile", "url", "file_url"], ""))
+    resource_url = ""
+    if resource:
+        if resource.get("storage_provider") == "oss" and resource.get("oss_bucket") and resource.get("oss_object_key"):
+            endpoint_host = urllib.parse.urlparse(resource.get("oss_endpoint") or OSS_ENDPOINT).netloc
+            resource_url = clean_source_url(f"https://{resource['oss_bucket']}.{endpoint_host}/{urllib.parse.quote(resource['oss_object_key'])}")
+        elif resource.get("stored_path"):
+            resource_url = f"/api/resources/{resource['id']}/download"
+    clean_title = (resource or {}).get("title") or display_name_from_url(title) or "未命名片段"
+    clean_snippet = str(chunk_text or "").strip()
+    if clean_snippet and clean_snippet.startswith("{") and len(clean_snippet) > 800:
+        clean_snippet = ""
+    score = hit.get("score")
+    distance = hit.get("distance")
     return {
         "key": hit.get("key") or hit.get("id") or "",
         "resource_id": resource_id,
-        "title": title or (resource or {}).get("title", ""),
-        "chunk_text": chunk_text,
-        "distance": hit.get("distance"),
-        "score": hit.get("score"),
+        "title": clean_title,
+        "snippet": clean_snippet or "该片段缺少正文内容，请检查预处理入库字段。",
+        "chunk_text": clean_snippet,
+        "source_url": source_url or resource_url,
+        "category": metadata_value(metadata, ["category_name", "category"], (resource or {}).get("category", "")),
+        "index": metadata_value(metadata, ["_vector_index", "index", "vector_index"], ""),
+        "distance": distance,
+        "score": score,
         "metadata": metadata,
         "resource": resource,
     }
@@ -494,6 +570,24 @@ def build_rag_context(hits, max_chars=6000):
     return "\n\n".join(parts)
 
 
+def public_source_hit(hit):
+    return {
+        "key": hit.get("key", ""),
+        "resource_id": hit.get("resource_id", ""),
+        "title": hit.get("title") or "未命名片段",
+        "snippet": hit.get("snippet") or hit.get("chunk_text") or "该片段缺少正文内容，请检查预处理入库字段。",
+        "source_url": hit.get("source_url", ""),
+        "category": hit.get("category", ""),
+        "index": hit.get("index", ""),
+        "score": hit.get("score"),
+        "distance": hit.get("distance"),
+    }
+
+
+def public_source_hits(hits):
+    return [public_source_hit(hit) for hit in hits]
+
+
 def local_ip_address():
     try:
         import socket
@@ -518,11 +612,22 @@ def rag_webhook_url(resource_id=None):
     return f"{callback_base_url()}{path}"
 
 
-def create_rag_preprocess_task(kb_type, file_urls, resource_id=None, bucket_name="", index_name=""):
+def create_rag_preprocess_task(kb_type, file_urls, resource_id=None, bucket_name="", index_name="", metadata=None):
     if not file_urls:
         return None
     bucket_name = str(bucket_name or RAG_PREPROCESS_BUCKET).strip()
     index_name = str(index_name or rag_index_for_type(kb_type)).strip()
+    metadata_payload = {
+        "resource_id": str(resource_id or ""),
+        "knowledge_base_type": kb_type,
+        "owner": bucket_name,
+        "category": index_name,
+        "index": index_name,
+        "source_url": file_urls[0] if len(file_urls) == 1 else "",
+        "file_urls": file_urls,
+    }
+    if isinstance(metadata, dict):
+        metadata_payload.update({key: value for key, value in metadata.items() if value is not None})
     payload = {
         "type": "rag-preprocess",
         "tenant": RAG_PREPROCESS_TENANT,
@@ -536,12 +641,7 @@ def create_rag_preprocess_task(kb_type, file_urls, resource_id=None, bucket_name
             "transcribe_media": RAG_TRANSCRIBE_MEDIA,
             "media_model": RAG_MEDIA_MODEL,
         },
-        "metadata": {
-            "resource_id": resource_id,
-            "knowledge_base_type": kb_type,
-            "owner": bucket_name,
-            "category": index_name,
-        },
+        "metadata": metadata_payload,
     }
     return rag_request("/api/rag-preprocess", method="POST", payload=payload)
 
@@ -1385,8 +1485,8 @@ class AppHandler(BaseHTTPRequestHandler):
         params = urllib.parse.parse_qs(parsed.query)
         if parsed.path == "/api/login":
             return self.login()
-        if parsed.path == "/api/register":
-            return self.register()
+        if parsed.path == "/api/users":
+            return self.create_user(params)
         if parsed.path == "/api/categories":
             return self.create_category(params)
         if parsed.path == "/api/upload":
@@ -1621,7 +1721,7 @@ class AppHandler(BaseHTTPRequestHandler):
             bucket = target["bucket"]
             index_name = target["index"]
             try:
-                raw_hits = vector_query(query, top_k=top_k, bucket=bucket, index_name=index_name, filter_payload=filter_payload)
+                raw_hits = vector_query_for_target(query, top_k, bucket, index_name, category, filter_payload)
             except Exception as exc:
                 return self.send_json({"error": str(exc)}, 500)
             metadata_ids = [
@@ -1640,7 +1740,7 @@ class AppHandler(BaseHTTPRequestHandler):
             "query": query,
             "bucket": bucket,
             "index": index_name,
-            "hits": hits,
+            "hits": public_source_hits(hits),
             "currentUser": public_user(current_user),
         })
 
@@ -1664,7 +1764,7 @@ class AppHandler(BaseHTTPRequestHandler):
             bucket = target["bucket"]
             index_name = target["index"]
             try:
-                raw_hits = vector_query(message, top_k=top_k, bucket=bucket, index_name=index_name, filter_payload=filter_payload)
+                raw_hits = vector_query_for_target(message, top_k, bucket, index_name, category, filter_payload)
             except Exception as exc:
                 return self.send_json({"error": str(exc)}, 500)
             metadata_ids = [
@@ -1701,12 +1801,12 @@ class AppHandler(BaseHTTPRequestHandler):
             try:
                 answer = chat_completion(messages)
             except Exception as exc:
-                return self.send_json({"error": str(exc), "sources": hits}, 500)
+                return self.send_json({"error": str(exc), "sources": public_source_hits(hits)}, 500)
             conn.execute("INSERT INTO calls (endpoint, created_at) VALUES (%s, %s)", ("/api/chat", now_text()))
             log_operation(conn, current_user, "chat", "vector", "", message)
         return self.send_json({
             "answer": answer,
-            "sources": hits,
+            "sources": public_source_hits(hits),
             "bucket": bucket,
             "index": index_name,
             "currentUser": public_user(current_user),
@@ -1864,7 +1964,7 @@ class AppHandler(BaseHTTPRequestHandler):
             user["last_login"] = time.strftime("%Y-%m-%d")
         return self.send_json({"ok": True, "user": public_user(user, include_token=True)})
 
-    def register(self):
+    def create_user(self, params):
         data = self.read_json()
         username = str(data.get("account", "")).strip()
         password = str(data.get("password", ""))
@@ -1874,6 +1974,11 @@ class AppHandler(BaseHTTPRequestHandler):
             return self.send_json({"error": "密码必须为英文+数字组合，且至少 8 个字符"}, 400)
 
         with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            if not is_admin(current_user):
+                return self.send_json({"error": "仅管理员可以分配账号"}, 403)
             exists = conn.execute(
                 "SELECT id FROM users WHERE login_account = %s OR name = %s",
                 (username, username),
@@ -1891,7 +1996,8 @@ class AppHandler(BaseHTTPRequestHandler):
             user = row_to_dict(
                 conn.execute("SELECT * FROM users WHERE login_account = %s", (username,)).fetchone()
             )
-        return self.send_json({"ok": True, "user": public_user(user, include_token=True)}, 201)
+            log_operation(conn, current_user, "create_user", "user", user["id"], username)
+        return self.send_json({"ok": True, "user": public_user(user)}, 201)
 
     def upload_file(self, params):
         content_type = self.headers.get("Content-Type", "")
@@ -2025,6 +2131,18 @@ class AppHandler(BaseHTTPRequestHandler):
                         resource_id,
                         bucket_name=vector_target["bucket"],
                         index_name=vector_target["index"],
+                        metadata={
+                            "title": title,
+                            "filename": original_name,
+                            "source_file": oss_url,
+                            "source_url": oss_url,
+                            "category_name": category,
+                            "index": vector_target["index"],
+                            "bucket": vector_target["bucket"],
+                            "owner": owner,
+                            "mime_type": mime_type,
+                            "file_type": ext,
+                        },
                     )
                     rag_task_id = rag_task.get("task_id") or rag_task.get("id") or ""
                     rag_status = rag_task.get("status") or "pending"

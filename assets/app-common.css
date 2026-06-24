@@ -22,10 +22,34 @@
   white-space: nowrap;
 }
 
+.side .upload {
+  min-height: 58px;
+  padding: 0 16px;
+  border-top: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(145deg, #1378ff, #006dff);
+  box-shadow: 0 14px 30px rgba(19, 120, 255, 0.24);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.side .upload svg {
+  width: 24px;
+  height: 24px;
+  color: #fff;
+  stroke-width: 2.3;
+}
+
+.side .upload:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+
 .upload.active {
-  color: #0069ff;
-  background: linear-gradient(90deg, rgba(0, 111, 255, 0.10), rgba(0, 111, 255, 0.02));
-  box-shadow: inset 3px 0 0 #0b72ff;
+  color: #fff;
+  background: linear-gradient(145deg, #0b72ff, #005ee8);
+  box-shadow: 0 16px 32px rgba(19, 120, 255, 0.28);
 }
 
 .is-loading {

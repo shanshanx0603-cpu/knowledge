@@ -399,16 +399,16 @@
     .store-line span { display: block; width: 64%; height: 100%; background: #1c6fff; border-radius: inherit; }
 
     .flow {
-      height: 58px;
+      height: 66px;
       display: grid;
       grid-column: 2;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       align-items: center;
       gap: 0;
       color: #30466f;
-      font-size: clamp(12px, .86vw, 13px);
+      font-size: clamp(11px, .78vw, 13px);
       font-weight: 800;
-      padding: 0 clamp(6px, 1vw, 16px);
+      padding: 8px clamp(6px, 1vw, 16px) 0;
       border-top: 1px solid rgba(77, 130, 210, 0.12);
     }
 
@@ -970,6 +970,10 @@
             <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" stroke="currentColor" stroke-width="2"/></svg>
             全部概览
           </a>
+          <a href="categories.html">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            分类管理
+          </a>
           <a data-nav-type="documents" class="active" href="detail.html?type=documents">
             <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6V3Z" fill="currentColor"/><path d="M9 11h6M9 15h5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
             文档知识库
@@ -981,10 +985,6 @@
           <a data-nav-type="images" href="detail.html?type=images">
             <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="m7 17 4-5 3 3.5 2-2.5 2 4H7Z" fill="currentColor"/></svg>
             图片知识库
-          </a>
-          <a href="categories.html">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h7v7H4V6Zm9 0h7v7h-7V6ZM4 15h7v3H4v-3Zm9 0h7v3h-7v-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-            分类管理
           </a>
         </nav>
         <a class="upload" href="upload.html">
@@ -1033,6 +1033,7 @@
             </div>
           </div>
           <div class="flow">
+            <div class="step"><div class="step-icon">⇧</div><span>文件上传</span></div>
             <div class="step"><div class="step-icon" id="parseIcon">▤</div><span id="parseStep">文档解析</span></div>
             <div class="step"><div class="step-icon">◇</div><span>索引构建</span></div>
             <div class="step"><div class="step-icon">◴</div><span>内容入库</span></div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI 对话 - 知识库中台</title>
+  <title>知识库调试 - 知识库中台</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -125,15 +125,82 @@
     .chat-shell {
       min-height: 0;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 320px;
-      gap: 14px;
+      grid-template-columns: 220px minmax(520px, 1fr) 420px;
+      gap: 16px;
     }
+    .sessions,
     .conversation,
     .sources {
       min-height: 0;
       background: #fff;
       border-radius: 10px;
       box-shadow: 0 16px 36px rgba(51, 85, 128, .12);
+    }
+    .sessions {
+      padding: 14px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+      overflow: hidden;
+    }
+    .session-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .session-top h2 {
+      margin: 0;
+      font-size: 16px;
+      color: #163b68;
+      white-space: nowrap;
+    }
+    .new-session {
+      height: 32px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 7px;
+      color: #fff;
+      background: #0b72ff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .session-list {
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      padding-right: 2px;
+    }
+    .session-item {
+      width: 100%;
+      border: 1px solid #e3edf7;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f9fbfe;
+      text-align: left;
+      cursor: pointer;
+    }
+    .session-item.active {
+      border-color: rgba(11, 114, 255, .55);
+      background: rgba(11, 114, 255, .08);
+    }
+    .session-title {
+      color: #1b3d63;
+      font-size: 14px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .session-meta {
+      margin-top: 6px;
+      color: #7a90aa;
+      font-size: 12px;
+      white-space: nowrap;
     }
     .conversation {
       display: grid;
@@ -151,7 +218,7 @@
     .message-row { display: flex; }
     .message-row.user { justify-content: flex-end; }
     .bubble {
-      max-width: min(760px, 78%);
+      max-width: min(720px, 76%);
       padding: 13px 15px;
       border-radius: 8px;
       line-height: 1.65;
@@ -198,7 +265,7 @@
       cursor: pointer;
     }
     .sources {
-      padding: 16px;
+      padding: 18px;
       overflow: auto;
     }
     .sources h2 {
@@ -206,27 +273,42 @@
       font-size: 16px;
       color: #163b68;
     }
-    .source-list { display: grid; gap: 10px; }
+    .source-list { display: grid; gap: 12px; }
     .source-item {
       border: 1px solid #e2ebf6;
       border-radius: 8px;
-      padding: 11px;
+      padding: 13px;
       background: #f9fbfe;
     }
     .source-title {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: #214464;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
       overflow-wrap: anywhere;
     }
+    .source-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: #7890ad;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .source-link {
+      color: #0b72ff;
+      text-decoration: none;
+    }
+    .source-link:hover { text-decoration: underline; }
     .source-text {
-      max-height: 118px;
+      max-height: 150px;
       overflow: auto;
       color: #5c718d;
-      font-size: 12px;
-      line-height: 1.55;
+      font-size: 13px;
+      line-height: 1.65;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
     .empty {
       color: #8094ad;
@@ -236,6 +318,11 @@
     @media (max-width: 1180px) {
       body { overflow: auto; }
       .page { min-width: 1180px; min-height: 760px; }
+    }
+    @media (min-width: 1600px) {
+      .chat-shell {
+        grid-template-columns: 230px minmax(760px, 1fr) 520px;
+      }
     }
   </style>
   <link rel="stylesheet" href="assets/app-common.css" />
@@ -262,9 +349,10 @@
 
       <section class="main">
         <div class="toolbar">
-          <div class="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;AI 对话</div>
+          <div class="crumb">知识库中台&nbsp;&nbsp;/&nbsp;&nbsp;知识库调试</div>
           <div class="selectors">
             <select id="categorySelect">
+              <option value="__all__">全部分类</option>
               <option value="课程资料">课程资料</option>
               <option value="学习资料">学习资料</option>
               <option value="个人资料">个人资料</option>
@@ -274,6 +362,14 @@
         </div>
 
         <section class="chat-shell">
+          <aside class="sessions">
+            <div class="session-top">
+              <h2>历史记录</h2>
+              <button class="new-session" id="newSessionButton" type="button">新增会话</button>
+            </div>
+            <div class="session-list" id="sessionList"></div>
+          </aside>
+
           <section class="conversation">
             <div class="messages" id="messages">
               <div class="message-row assistant">
@@ -302,22 +398,116 @@
     const messagesNode = document.getElementById("messages");
     const sourceList = document.getElementById("sourceList");
     const form = document.getElementById("chatForm");
-    const input = document.getElementById("messageInput");
-    const sendButton = document.getElementById("sendButton");
-    const bucketInput = document.getElementById("bucketInput");
-    const categorySelect = document.getElementById("categorySelect");
-    const history = [];
+	    const input = document.getElementById("messageInput");
+	    const sendButton = document.getElementById("sendButton");
+	    const bucketInput = document.getElementById("bucketInput");
+	    const categorySelect = document.getElementById("categorySelect");
+	    const sessionList = document.getElementById("sessionList");
+	    const newSessionButton = document.getElementById("newSessionButton");
+	    const welcomeText = "你好，我可以基于知识库内容回答问题。你可以问我课程适合对象、方案内容、实施流程等。";
+	    let currentUserKey = localStorage.getItem("currentUser") || "guest";
+	    let sessions = [];
+	    let activeSessionId = "";
+
+	    function storageKey() {
+	      return `knowledge-debug-sessions:${currentUserKey || "guest"}`;
+	    }
+
+	    function createSession() {
+	      const now = new Date().toISOString();
+	      return {
+	        id: `session_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+	        title: "新会话",
+	        createdAt: now,
+	        updatedAt: now,
+	        messages: [],
+	        sources: []
+	      };
+	    }
+
+	    function getActiveSession() {
+	      return sessions.find((session) => session.id === activeSessionId) || null;
+	    }
+
+	    function saveSessions() {
+	      localStorage.setItem(storageKey(), JSON.stringify(sessions.slice(0, 40)));
+	    }
+
+	    function loadSessions() {
+	      try {
+	        const parsed = JSON.parse(localStorage.getItem(storageKey()) || "[]");
+	        sessions = Array.isArray(parsed) ? parsed.filter((item) => item && item.id) : [];
+	      } catch (error) {
+	        sessions = [];
+	      }
+	      if (!sessions.length) sessions = [createSession()];
+	      activeSessionId = sessions[0].id;
+	      saveSessions();
+	      renderSessionList();
+	      renderActiveSession();
+	    }
+
+	    function formatSessionTime(value) {
+	      const date = new Date(value);
+	      if (Number.isNaN(date.getTime())) return "";
+	      return `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+	    }
+
+	    function renderSessionList() {
+	      sessionList.innerHTML = "";
+	      sessions.forEach((session) => {
+	        const button = document.createElement("button");
+	        button.type = "button";
+	        button.className = `session-item${session.id === activeSessionId ? " active" : ""}`;
+	        button.dataset.sessionId = session.id;
+	        const title = document.createElement("div");
+	        title.className = "session-title";
+	        title.textContent = session.title || "新会话";
+	        const meta = document.createElement("div");
+	        meta.className = "session-meta";
+	        meta.textContent = `${(session.messages || []).length} 条消息 · ${formatSessionTime(session.updatedAt)}`;
+	        button.append(title, meta);
+	        sessionList.appendChild(button);
+	      });
+	    }
+
+	    function renderActiveSession() {
+	      const session = getActiveSession();
+	      messagesNode.innerHTML = "";
+	      appendMessage("assistant", welcomeText, false);
+	      (session?.messages || []).forEach((item) => appendMessage(item.role, item.content, false));
+	      renderSources(session?.sources || []);
+	      messagesNode.scrollTop = messagesNode.scrollHeight;
+	    }
+
+	    function switchSession(sessionId) {
+	      if (activeSessionId === sessionId) return;
+	      activeSessionId = sessionId;
+	      renderSessionList();
+	      renderActiveSession();
+	    }
+
+	    function startNewSession() {
+	      const session = createSession();
+	      sessions.unshift(session);
+	      activeSessionId = session.id;
+	      saveSessions();
+	      renderSessionList();
+	      renderActiveSession();
+	      input.focus();
+	    }
 
     async function applyUserVectorTarget() {
       try {
         const response = await fetch(KnowledgeApp.apiUrl("/api/profile"));
         const data = await response.json();
-        const user = data.user || {};
-        bucketInput.value = user.vector_bucket || "liu-teacher-618-v2";
-        const editable = user.account_type === "admin";
-        bucketInput.readOnly = !editable;
-      } catch (error) {
-        bucketInput.value = "liu-teacher-618-v2";
+	        const user = data.user || {};
+	        currentUserKey = user.username || localStorage.getItem("currentUser") || "guest";
+	        bucketInput.value = user.vector_bucket || "liu-teacher-618-v2";
+	        const editable = user.account_type === "admin";
+	        bucketInput.readOnly = !editable;
+	      } catch (error) {
+	        bucketInput.value = "liu-teacher-618-v2";
         bucketInput.readOnly = true;
       }
     }
@@ -327,24 +517,28 @@
         const response = await fetch(KnowledgeApp.apiUrl("/api/categories"));
         const data = await response.json();
         const items = data.items || [];
-        if (!items.length) return;
-        categorySelect.innerHTML = items.map((item) => `<option value="${item.name}">${item.name}</option>`).join("");
+        const categoryOptions = ['<option value="__all__">全部分类</option>'];
+        if (items.length) {
+          categoryOptions.push(...items.map((item) => `<option value="${item.name}">${item.name}</option>`));
+        }
+        categorySelect.innerHTML = categoryOptions.join("");
+        categorySelect.value = "__all__";
       } catch (error) {
-        categorySelect.value = "课程资料";
+        categorySelect.value = "__all__";
       }
     }
 
-    function appendMessage(role, content) {
-      const row = document.createElement("div");
-      row.className = `message-row ${role}`;
-      const bubble = document.createElement("div");
-      bubble.className = "bubble";
-      bubble.textContent = content;
-      row.appendChild(bubble);
-      messagesNode.appendChild(row);
-      messagesNode.scrollTop = messagesNode.scrollHeight;
-      return bubble;
-    }
+	    function appendMessage(role, content, shouldScroll = true) {
+	      const row = document.createElement("div");
+	      row.className = `message-row ${role}`;
+	      const bubble = document.createElement("div");
+	      bubble.className = "bubble";
+	      bubble.textContent = content;
+	      row.appendChild(bubble);
+	      messagesNode.appendChild(row);
+	      if (shouldScroll) messagesNode.scrollTop = messagesNode.scrollHeight;
+	      return bubble;
+	    }
 
     function renderSources(sources) {
       sourceList.innerHTML = "";
@@ -357,44 +551,82 @@
         item.className = "source-item";
         const title = document.createElement("div");
         title.className = "source-title";
-        title.textContent = `[${index + 1}] ${source.title || source.key || "未命名片段"}`;
+        title.textContent = `[${index + 1}] ${source.title || "未命名片段"}`;
+        const meta = document.createElement("div");
+        meta.className = "source-meta";
+        const metaItems = [];
+        if (source.category) metaItems.push(`分类：${source.category}`);
+        if (source.index) metaItems.push(`索引：${source.index}`);
+        if (source.distance !== null && source.distance !== undefined) metaItems.push(`距离：${Number(source.distance).toFixed(4)}`);
+        if (source.score !== null && source.score !== undefined) metaItems.push(`分数：${Number(source.score).toFixed(4)}`);
+        meta.textContent = metaItems.join("  ");
         const text = document.createElement("div");
         text.className = "source-text";
-        text.textContent = source.chunk_text || JSON.stringify(source.metadata || {}, null, 2);
-        item.append(title, text);
+        text.textContent = source.snippet || source.chunk_text || "该片段缺少正文内容，请检查预处理入库字段。";
+        item.append(title);
+        if (metaItems.length) item.appendChild(meta);
+        item.appendChild(text);
+        if (source.source_url) {
+          const link = document.createElement("a");
+          link.className = "source-link";
+          link.href = source.source_url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "查看原文件";
+          item.appendChild(link);
+        }
         sourceList.appendChild(item);
       });
     }
 
-    async function sendMessage(message) {
-      appendMessage("user", message);
-      history.push({ role: "user", content: message });
-      const pending = appendMessage("assistant", "正在检索知识库...");
-      KnowledgeApp.setButtonLoading(sendButton, true, "发送");
-      try {
-        const response = await fetch(KnowledgeApp.apiUrl("/api/chat"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message,
-            history,
-            top_k: 6,
-            bucket: bucketInput.value.trim(),
-            category: categorySelect.value
-          })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "AI 对话失败");
-        pending.textContent = data.answer || "没有生成回答。";
-        history.push({ role: "assistant", content: pending.textContent });
-        renderSources(data.sources || []);
-      } catch (error) {
-        pending.textContent = `调用失败：${error.message}`;
-        renderSources([]);
-      } finally {
-        KnowledgeApp.setButtonLoading(sendButton, false);
-      }
-    }
+	    async function sendMessage(message) {
+	      let session = getActiveSession();
+	      if (!session) {
+	        session = createSession();
+	        sessions.unshift(session);
+	        activeSessionId = session.id;
+	      }
+	      appendMessage("user", message);
+	      session.messages.push({ role: "user", content: message });
+	      if (!session.title || session.title === "新会话") session.title = message.slice(0, 24);
+	      session.updatedAt = new Date().toISOString();
+	      saveSessions();
+	      renderSessionList();
+	      const pending = appendMessage("assistant", "正在检索知识库...");
+	      KnowledgeApp.setButtonLoading(sendButton, true, "发送");
+	      try {
+	        const response = await fetch(KnowledgeApp.apiUrl("/api/chat"), {
+	          method: "POST",
+	          headers: { "Content-Type": "application/json" },
+	          body: JSON.stringify({
+	            message,
+	            history: session.messages,
+	            top_k: 6,
+	            bucket: bucketInput.value.trim(),
+	            category: categorySelect.value
+	          })
+	        });
+	        const data = await response.json();
+	        if (!response.ok) throw new Error(data.error || "知识库调试失败");
+	        pending.textContent = data.answer || "没有生成回答。";
+	        session.messages.push({ role: "assistant", content: pending.textContent });
+	        session.sources = data.sources || [];
+	        session.updatedAt = new Date().toISOString();
+	        saveSessions();
+	        renderSessionList();
+	        renderSources(session.sources);
+	      } catch (error) {
+	        pending.textContent = `调用失败：${error.message}`;
+	        session.messages.push({ role: "assistant", content: pending.textContent });
+	        session.sources = [];
+	        session.updatedAt = new Date().toISOString();
+	        saveSessions();
+	        renderSessionList();
+	        renderSources([]);
+	      } finally {
+	        KnowledgeApp.setButtonLoading(sendButton, false);
+	      }
+	    }
 
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -404,15 +636,28 @@
       sendMessage(message);
     });
 
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        form.requestSubmit();
-      }
-    });
+	    input.addEventListener("keydown", (event) => {
+	      if (event.key === "Enter" && !event.shiftKey) {
+	        event.preventDefault();
+	        form.requestSubmit();
+	      }
+	    });
 
-    applyUserVectorTarget();
-    loadCategories();
-  </script>
+	    sessionList.addEventListener("click", (event) => {
+	      const item = event.target.closest(".session-item");
+	      if (!item) return;
+	      switchSession(item.dataset.sessionId);
+	    });
+
+	    newSessionButton.addEventListener("click", startNewSession);
+
+	    async function init() {
+	      await applyUserVectorTarget();
+	      await loadCategories();
+	      loadSessions();
+	    }
+
+	    init();
+	  </script>
 </body>
 </html>
