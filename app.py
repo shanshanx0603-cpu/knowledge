@@ -47,7 +47,7 @@ OSS_ENDPOINT = os.getenv("OSS_ENDPOINT", "")
 OSS_UPLOAD_BUCKET = os.getenv("OSS_UPLOAD_BUCKET", "knowledge-center-upload")
 OSS_DOWNLOAD_EXPIRES = int(os.getenv("OSS_DOWNLOAD_EXPIRES", "3600"))
 RAG_PREPROCESS_BASE_URL = os.getenv("RAG_PREPROCESS_BASE_URL", "http://192.168.2.18:3000").rstrip("/")
-RAG_PREPROCESS_TENANT = os.getenv("RAG_PREPROCESS_TENANT", "knowledge")
+RAG_PREPROCESS_API_KEY = os.getenv("RAG_PREPROCESS_API_KEY", "")
 RAG_PREPROCESS_SOURCE = os.getenv("RAG_PREPROCESS_SOURCE", "knowledge")
 RAG_PREPROCESS_BUCKET = os.getenv("RAG_PREPROCESS_BUCKET", "liu-teacher-618-v2")
 RAG_PREPROCESS_TIMEOUT = int(os.getenv("RAG_PREPROCESS_TIMEOUT", "8"))
@@ -62,6 +62,7 @@ OSS_VECTOR_ACCOUNT_ID = os.getenv("OSS_VECTOR_ACCOUNT_ID", "")
 OSS_VECTOR_BUCKET = os.getenv("OSS_VECTOR_BUCKET", RAG_PREPROCESS_BUCKET)
 OSS_VECTOR_INDEX = os.getenv("OSS_VECTOR_INDEX", "course")
 RAG_SEARCH_TOP_K = int(os.getenv("RAG_SEARCH_TOP_K", "6"))
+RAG_MAX_DISTANCE = float(os.getenv("RAG_MAX_DISTANCE", "0.6"))
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "")
 WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", PUBLIC_BASE_URL)
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -309,6 +310,8 @@ def rag_request(path, method="GET", payload=None):
     url = f"{RAG_PREPROCESS_BASE_URL}{path}"
     data = None
     headers = {}
+    if RAG_PREPROCESS_API_KEY:
+        headers["Authorization"] = f"Bearer {RAG_PREPROCESS_API_KEY}"
     if payload is not None:
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -495,6 +498,24 @@ def display_name_from_url(value):
     return name or value
 
 
+def markdown_frontmatter_value(text, key):
+    match = re.search(rf"(?m)^{re.escape(key)}:\s*[\"']?([^\"'\n]+)[\"']?\s*$", str(text or ""))
+    return match.group(1).strip() if match else ""
+
+
+def clean_vector_chunk_text(text):
+    text = str(text or "").strip()
+    if text.startswith("---"):
+        text = re.sub(r"^---\s*\n.*?\n---\s*\n?", "", text, flags=re.S).strip()
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("# ") and "chunk" in stripped.lower():
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
 def normalize_vector_hit(hit, resource_lookup=None):
     metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
     resource_id = str(metadata_value(metadata, ["resource_id", "resourceId", "resourceID", "rid"], "") or "")
@@ -502,9 +523,20 @@ def normalize_vector_hit(hit, resource_lookup=None):
     title = metadata_value(metadata, ["title", "filename", "file_name", "file", "source_file", "source"], "")
     chunk_text = metadata_value(
         metadata,
-        ["chunk_text", "chunkText", "snippet", "text", "content", "page_content", "markdown", "raw_text"],
+        [
+            "chunk_text",
+            "chunkText",
+            "snippet",
+            "text",
+            "content",
+            "page_content",
+            "markdown",
+            "raw_text",
+            "OSSVECTORS-EMBED-SRC-CONTENT",
+        ],
         "",
     )
+    title = title or markdown_frontmatter_value(chunk_text, "source_file")
     source_url = clean_source_url(metadata_value(metadata, ["source_url", "sourceUrl", "source_file", "sourceFile", "url", "file_url"], ""))
     resource_url = ""
     if resource:
@@ -514,7 +546,7 @@ def normalize_vector_hit(hit, resource_lookup=None):
         elif resource.get("stored_path"):
             resource_url = f"/api/resources/{resource['id']}/download"
     clean_title = (resource or {}).get("title") or display_name_from_url(title) or "未命名片段"
-    clean_snippet = str(chunk_text or "").strip()
+    clean_snippet = clean_vector_chunk_text(chunk_text)
     if clean_snippet and clean_snippet.startswith("{") and len(clean_snippet) > 800:
         clean_snippet = ""
     score = hit.get("score")
@@ -533,6 +565,16 @@ def normalize_vector_hit(hit, resource_lookup=None):
         "metadata": metadata,
         "resource": resource,
     }
+
+
+def is_relevant_vector_hit(hit):
+    distance = hit.get("distance")
+    if distance is None:
+        return True
+    try:
+        return float(distance) <= RAG_MAX_DISTANCE
+    except (TypeError, ValueError):
+        return True
 
 
 def visible_resource_lookup(conn, user, resource_ids):
@@ -629,10 +671,7 @@ def create_rag_preprocess_task(kb_type, file_urls, resource_id=None, bucket_name
     if isinstance(metadata, dict):
         metadata_payload.update({key: value for key, value in metadata.items() if value is not None})
     payload = {
-        "type": "rag-preprocess",
-        "tenant": RAG_PREPROCESS_TENANT,
         "source": RAG_PREPROCESS_SOURCE,
-        "user_id": str(resource_id or ""),
         "bucket": bucket_name,
         "index": index_name,
         "file_urls": file_urls,
@@ -1526,6 +1565,8 @@ class AppHandler(BaseHTTPRequestHandler):
                 ).fetchone())
                 if row is None:
                     return self.send_json({"error": "资源不存在或无权限删除"}, 404)
+                if row.get("status") == "indexing" or (row.get("rag_status") and row.get("rag_status") not in {"completed", "failed"}):
+                    return self.send_json({"error": "文件正在索引中，暂不能删除"}, 409)
                 try:
                     delete_oss_object(row)
                 except Exception as exc:
@@ -1732,6 +1773,8 @@ class AppHandler(BaseHTTPRequestHandler):
             hits = []
             for raw_hit in raw_hits:
                 hit = normalize_vector_hit(raw_hit, resource_lookup)
+                if not is_relevant_vector_hit(hit):
+                    continue
                 if hit.get("resource_id") and hit["resource_id"] not in resource_lookup:
                     continue
                 hits.append(hit)
@@ -1775,6 +1818,8 @@ class AppHandler(BaseHTTPRequestHandler):
             hits = []
             for raw_hit in raw_hits:
                 hit = normalize_vector_hit(raw_hit, resource_lookup)
+                if not is_relevant_vector_hit(hit):
+                    continue
                 if hit.get("resource_id") and hit["resource_id"] not in resource_lookup:
                     continue
                 hits.append(hit)
