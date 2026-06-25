@@ -520,6 +520,9 @@ def normalize_vector_hit(hit, resource_lookup=None):
     metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
     resource_id = str(metadata_value(metadata, ["resource_id", "resourceId", "resourceID", "rid"], "") or "")
     resource = resource_lookup.get(resource_id) if resource_lookup and resource_id else None
+    if resource is None and resource_lookup and not resource_id and len(resource_lookup) == 1:
+        resource = next(iter(resource_lookup.values()))
+        resource_id = str(resource.get("id") or "")
     title = metadata_value(metadata, ["title", "filename", "file_name", "file", "source_file", "source"], "")
     chunk_text = metadata_value(
         metadata,
@@ -541,8 +544,7 @@ def normalize_vector_hit(hit, resource_lookup=None):
     resource_url = ""
     if resource:
         if resource.get("storage_provider") == "oss" and resource.get("oss_bucket") and resource.get("oss_object_key"):
-            endpoint_host = urllib.parse.urlparse(resource.get("oss_endpoint") or OSS_ENDPOINT).netloc
-            resource_url = clean_source_url(f"https://{resource['oss_bucket']}.{endpoint_host}/{urllib.parse.quote(resource['oss_object_key'])}")
+            resource_url = f"/api/resources/{resource['id']}/download"
         elif resource.get("stored_path"):
             resource_url = f"/api/resources/{resource['id']}/download"
     clean_title = (resource or {}).get("title") or display_name_from_url(title) or "未命名片段"
@@ -565,6 +567,29 @@ def normalize_vector_hit(hit, resource_lookup=None):
         "metadata": metadata,
         "resource": resource,
     }
+
+
+def candidate_resource_names_from_hit(hit):
+    metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
+    values = []
+    content = metadata_value(metadata, ["OSSVECTORS-EMBED-SRC-CONTENT", "chunk_text", "content", "text", "markdown"], "")
+    for value in [
+        metadata_value(metadata, ["source_url", "sourceUrl", "file_url", "url"], ""),
+        metadata_value(metadata, ["source_file", "sourceFile", "title", "filename", "file_name", "file", "source"], ""),
+        metadata_value(metadata, ["OSSVECTORS-EMBED-SRC-LOCATION"], ""),
+        markdown_frontmatter_value(content, "source_file"),
+    ]:
+        value = str(value or "").strip()
+        if not value:
+            continue
+        parsed = urllib.parse.urlparse(value)
+        path_value = urllib.parse.unquote(parsed.path or value)
+        name = Path(path_value).name
+        if name:
+            values.append(name)
+        if path_value:
+            values.append(path_value)
+    return [item for item in dict.fromkeys(values) if item]
 
 
 def is_relevant_vector_hit(hit):
@@ -594,6 +619,40 @@ def visible_resource_lookup(conn, user, resource_ids):
         ids + owner_args,
     ).fetchall()
     return {str(row["id"]): row_to_dict(row) for row in rows}
+
+
+def visible_resource_lookup_by_names(conn, user, raw_hits):
+    names = []
+    for hit in raw_hits:
+        names.extend(candidate_resource_names_from_hit(hit))
+    names = [name for name in dict.fromkeys(names) if name]
+    if not names:
+        return {}
+    owner_sql, owner_args = owner_clause(user, "r")
+    conditions = []
+    args = []
+    for name in names[:20]:
+        basename = Path(name).name
+        conditions.append("(r.title = %s OR r.oss_object_key = %s OR r.oss_object_key LIKE %s OR r.stored_path LIKE %s)")
+        args.extend([basename, name, f"%{basename}", f"%{basename}"])
+    rows = conn.execute(
+        f"""
+        SELECT r.*, k.type AS knowledge_base_type, k.title AS knowledge_base_title
+        FROM resources r
+        JOIN knowledge_bases k ON k.id = r.knowledge_base_id
+        WHERE ({" OR ".join(conditions)})
+        {owner_sql}
+        """,
+        args + owner_args,
+    ).fetchall()
+    lookup = {}
+    for row in rows:
+        resource = row_to_dict(row)
+        for key in [resource.get("title"), resource.get("oss_object_key"), Path(str(resource.get("oss_object_key") or "")).name, resource.get("stored_path")]:
+            if key:
+                lookup[str(key)] = resource
+                lookup[Path(str(key)).name] = resource
+    return lookup
 
 
 def build_rag_context(hits, max_chars=6000):
@@ -1770,13 +1829,22 @@ class AppHandler(BaseHTTPRequestHandler):
                 for hit in raw_hits
             ]
             resource_lookup = visible_resource_lookup(conn, current_user, metadata_ids)
+            resource_name_lookup = visible_resource_lookup_by_names(conn, current_user, raw_hits)
             hits = []
             for raw_hit in raw_hits:
                 hit = normalize_vector_hit(raw_hit, resource_lookup)
+                if not hit.get("source_url"):
+                    for name in candidate_resource_names_from_hit(raw_hit):
+                        resource = resource_name_lookup.get(name) or resource_name_lookup.get(Path(name).name)
+                        if resource:
+                            hit = normalize_vector_hit(raw_hit, {str(resource["id"]): resource})
+                            hit["resource_id"] = str(resource["id"])
+                            break
                 if not is_relevant_vector_hit(hit):
                     continue
                 if hit.get("resource_id") and hit["resource_id"] not in resource_lookup:
-                    continue
+                    if not any(str(resource.get("id")) == hit["resource_id"] for resource in resource_name_lookup.values()):
+                        continue
                 hits.append(hit)
             log_operation(conn, current_user, "rag_search", "vector", "", query)
         return self.send_json({
@@ -1815,13 +1883,22 @@ class AppHandler(BaseHTTPRequestHandler):
                 for hit in raw_hits
             ]
             resource_lookup = visible_resource_lookup(conn, current_user, metadata_ids)
+            resource_name_lookup = visible_resource_lookup_by_names(conn, current_user, raw_hits)
             hits = []
             for raw_hit in raw_hits:
                 hit = normalize_vector_hit(raw_hit, resource_lookup)
+                if not hit.get("source_url"):
+                    for name in candidate_resource_names_from_hit(raw_hit):
+                        resource = resource_name_lookup.get(name) or resource_name_lookup.get(Path(name).name)
+                        if resource:
+                            hit = normalize_vector_hit(raw_hit, {str(resource["id"]): resource})
+                            hit["resource_id"] = str(resource["id"])
+                            break
                 if not is_relevant_vector_hit(hit):
                     continue
                 if hit.get("resource_id") and hit["resource_id"] not in resource_lookup:
-                    continue
+                    if not any(str(resource.get("id")) == hit["resource_id"] for resource in resource_name_lookup.values()):
+                        continue
                 hits.append(hit)
             context = build_rag_context(hits)
             messages = [
