@@ -516,6 +516,20 @@ def clean_vector_chunk_text(text):
     return "\n".join(lines).strip()
 
 
+def load_chunk_text_from_oss(metadata):
+    chunk_bucket = str(metadata_value(metadata, ["chunk_bucket", "chunkBucket"], "") or "").strip()
+    chunk_key = str(metadata_value(metadata, ["chunk_key", "chunkKey"], "") or "").strip().lstrip("/")
+    if not chunk_bucket or not chunk_key:
+        return ""
+    if not oss_enabled():
+        return ""
+    try:
+        data = oss_bucket_client(chunk_bucket).get_object(chunk_key).read()
+        return data.decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
 def normalize_vector_hit(hit, resource_lookup=None):
     metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
     resource_id = str(metadata_value(metadata, ["resource_id", "resourceId", "resourceID", "rid"], "") or "")
@@ -524,7 +538,7 @@ def normalize_vector_hit(hit, resource_lookup=None):
         resource = next(iter(resource_lookup.values()))
         resource_id = str(resource.get("id") or "")
     title = metadata_value(metadata, ["title", "filename", "file_name", "file", "source_file", "source"], "")
-    chunk_text = metadata_value(
+    metadata_chunk_text = metadata_value(
         metadata,
         [
             "chunk_text",
@@ -539,6 +553,7 @@ def normalize_vector_hit(hit, resource_lookup=None):
         ],
         "",
     )
+    chunk_text = load_chunk_text_from_oss(metadata) or metadata_chunk_text
     title = title or markdown_frontmatter_value(chunk_text, "source_file")
     source_url = clean_source_url(metadata_value(metadata, ["source_url", "sourceUrl", "source_file", "sourceFile", "url", "file_url"], ""))
     resource_url = ""
@@ -572,11 +587,15 @@ def normalize_vector_hit(hit, resource_lookup=None):
 def candidate_resource_names_from_hit(hit):
     metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
     values = []
-    content = metadata_value(metadata, ["OSSVECTORS-EMBED-SRC-CONTENT", "chunk_text", "content", "text", "markdown"], "")
+    content = (
+        load_chunk_text_from_oss(metadata)
+        or metadata_value(metadata, ["OSSVECTORS-EMBED-SRC-CONTENT", "chunk_text", "content", "text", "markdown"], "")
+    )
     for value in [
         metadata_value(metadata, ["source_url", "sourceUrl", "file_url", "url"], ""),
         metadata_value(metadata, ["source_file", "sourceFile", "title", "filename", "file_name", "file", "source"], ""),
         metadata_value(metadata, ["OSSVECTORS-EMBED-SRC-LOCATION"], ""),
+        metadata_value(metadata, ["chunk_key", "chunkKey"], ""),
         markdown_frontmatter_value(content, "source_file"),
     ]:
         value = str(value or "").strip()
