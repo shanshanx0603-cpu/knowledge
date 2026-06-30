@@ -495,15 +495,19 @@
     }
 
     .type-legend {
-      gap: 6px;
+      gap: 8px;
       align-self: stretch;
       align-content: center;
     }
 
     .type-legend .legend-row {
-      min-height: 34px;
-      grid-template-columns: 10px minmax(56px, 1fr) minmax(66px, 72px);
-      column-gap: 8px;
+      min-height: 46px;
+      grid-template-columns: 10px minmax(0, 1fr) auto;
+      column-gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid rgba(74, 123, 205, .10);
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(244,248,255,.72));
     }
 
     .type-legend .dot {
@@ -519,7 +523,7 @@
 
     .type-legend .legend-label span {
       color: #172c58;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 950;
     }
 
@@ -532,8 +536,8 @@
 
     .type-legend strong {
       align-self: center;
-      color: #223b6c;
-      font-size: 12px;
+      color: #0f6eff;
+      font-size: 14px;
       line-height: 1;
       min-width: 0;
       overflow: hidden;
@@ -541,15 +545,32 @@
       text-overflow: clip;
     }
 
+    .type-panel {
+      grid-template-rows: 32px minmax(0, 1fr) 40px;
+    }
+
+    .type-body {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      align-content: stretch;
+      gap: clamp(10px, 1.2vh, 14px);
+      align-self: stretch;
+      overflow: hidden;
+    }
+
     .type-panel .donut-row {
-      grid-template-columns: minmax(94px, 118px) minmax(0, 1fr);
-      gap: clamp(14px, 1.1vw, 20px);
-      padding: 0 4px 0 2px;
+      grid-template-columns: minmax(126px, 150px) minmax(0, 1fr);
+      gap: clamp(16px, 1.4vw, 24px);
+      align-self: center;
+      height: auto;
+      padding: 2px 2px 0;
     }
 
     .type-panel .donut {
-      width: clamp(100px, 5vw, 124px);
-      height: clamp(100px, 5vw, 124px);
+      width: clamp(124px, 7.6vw, 148px);
+      height: clamp(124px, 7.6vw, 148px);
+      box-shadow: 0 18px 34px rgba(19, 120, 255, .12);
     }
 
     .type-panel .donut::before {
@@ -557,7 +578,51 @@
     }
 
     .type-panel .donut-center span {
-      font-size: 9px;
+      font-size: 10px;
+    }
+
+    .type-bars {
+      min-height: 0;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      padding: 14px 16px;
+      height: clamp(112px, 13vh, 132px);
+      border-radius: 10px;
+      border: 1px solid rgba(74, 123, 205, .10);
+      background: linear-gradient(180deg, rgba(248, 251, 255, .88), rgba(243, 248, 255, .66));
+      overflow: hidden;
+    }
+
+    .type-bar-row {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) 46px;
+      align-items: center;
+      gap: 10px;
+      color: #253f6d;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .type-bar-row > span:first-child,
+    .type-bar-row > span:last-child {
+      white-space: nowrap;
+    }
+
+    .type-bar-track {
+      height: 7px;
+      border-radius: 999px;
+      background: #e7eef9;
+      overflow: hidden;
+    }
+
+    .type-bar-track span {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--c, #1378ff);
     }
 
     .dot {
@@ -590,10 +655,10 @@
     .bar-chart {
       min-height: 0;
       display: grid;
-      grid-template-columns: repeat(7, minmax(26px, 1fr));
-      grid-template-rows: minmax(0, 1fr) 24px;
+      grid-template-columns: repeat(15, minmax(14px, 1fr));
+      grid-template-rows: minmax(0, 1fr) 34px;
       align-items: end;
-      gap: clamp(3px, .55vw, 8px);
+      gap: clamp(2px, .35vw, 5px);
       align-self: center;
       height: min(100%, clamp(320px, 46vh, 560px));
       padding: clamp(26px, 3vh, 42px) 2px 0 0;
@@ -603,21 +668,33 @@
     .bar-wrap {
       height: 100%;
       display: grid;
-      grid-template-rows: minmax(0, 1fr) 24px;
+      grid-template-rows: minmax(0, 1fr) 34px;
       align-items: end;
       justify-items: center;
       color: #41577e;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 750;
       min-width: 0;
     }
 
-    .bar-wrap > span {
-      white-space: nowrap;
+    .bar-label {
+      align-self: start;
+      display: grid;
+      justify-items: center;
+      gap: 2px;
+      width: 100%;
+      line-height: 1.05;
+      white-space: normal;
+      text-align: center;
+    }
+
+    .bar-label span {
+      display: block;
+      min-width: 0;
     }
 
     .bar {
-      width: clamp(24px, 1.65vw, 36px);
+      width: clamp(14px, 1vw, 24px);
       height: var(--h);
       min-height: 18px;
       border-radius: 8px 8px 2px 2px;
@@ -633,31 +710,215 @@
       top: -24px;
       transform: translateX(-50%);
       color: #1b4f8f;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 900;
     }
 
-    .task-grid {
+    .health-panel {
+      grid-template-rows: auto minmax(0, 1fr) 40px;
+    }
+
+    .health-head {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .health-badge {
+      min-width: 72px;
+      height: 26px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0 11px;
+      border-radius: 999px;
+      color: #0e8f71;
+      background: #e8faf4;
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .health-badge.warning {
+      color: #126cff;
+      background: #edf4ff;
+    }
+
+    .health-badge.danger {
+      color: #f13c33;
+      background: #fff0f0;
+    }
+
+    .health-body {
       min-height: 0;
       display: grid;
-      grid-template-columns: minmax(108px, 140px) minmax(0, 1fr);
-      align-items: center;
+      grid-template-rows: auto minmax(0, 1fr);
       align-self: center;
-      gap: clamp(18px, 1.55vw, 30px);
+      gap: clamp(10px, 1.15vh, 14px);
       height: min(100%, clamp(220px, 31vh, 360px));
       padding-top: 4px;
       overflow: hidden;
     }
 
-    .task-donut {
-      width: clamp(108px, 6vw, 140px);
-      height: clamp(108px, 6vw, 140px);
-      background: conic-gradient(var(--green) 0 94%, #32a5ff 94% 97%, #ff9239 97% 98.2%, #8997ad 98.2% 100%);
+    .health-summary {
+      min-width: 0;
+      display: grid;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(44, 199, 174, .18);
+      background:
+        radial-gradient(circle at 92% 18%, rgba(32, 199, 155, .14), transparent 26%),
+        linear-gradient(145deg, rgba(247, 252, 255, .94), rgba(239, 250, 247, .72));
     }
 
-    .task-legend {
-      align-content: center;
-      gap: 14px;
+    .health-line {
+      min-width: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      color: #172d5d;
+      font-size: 14px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .health-line strong {
+      color: #071a3d;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .health-progress {
+      height: 8px;
+      border-radius: 999px;
+      background: #e3edf8;
+      overflow: hidden;
+    }
+
+    .health-progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #20c79b, #1fc7c5);
+    }
+
+    .health-note {
+      min-width: 0;
+      color: #5d708f;
+      font-size: 12px;
+      font-weight: 850;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .recent-section {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 18px minmax(0, 1fr);
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .recent-section-title {
+      color: #344d78;
+      font-size: 12px;
+      font-weight: 950;
+      line-height: 18px;
+    }
+
+    .recent-upload-list {
+      min-height: 0;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .recent-upload-item {
+      min-width: 0;
+      min-height: 42px;
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(248, 251, 255, .76);
+      border: 1px solid rgba(74, 123, 205, .10);
+    }
+
+    .recent-file-icon {
+      width: 26px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      color: white;
+      background: linear-gradient(145deg, #1378ff, #4bc8ff);
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .recent-file-main {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .recent-file-name {
+      min-width: 0;
+      overflow: hidden;
+      color: #162f60;
+      font-size: 13px;
+      font-weight: 950;
+      line-height: 1.15;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .recent-file-meta {
+      min-width: 0;
+      overflow: hidden;
+      color: #6c7f9d;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.15;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .recent-status {
+      min-width: 58px;
+      height: 24px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      padding: 0 9px;
+      color: #126cff;
+      background: #edf4ff;
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .recent-status.indexed { color: #12a887; background: #e8faf4; }
+    .recent-status.indexing { color: #126cff; background: #edf4ff; }
+    .recent-status.failed { color: #f13c33; background: #fff0f0; }
+    .recent-status.pending { color: #667389; background: #eef2f7; }
+
+    .recent-empty {
+      align-self: center;
+      color: #7284a1;
+      font-size: 13px;
+      font-weight: 850;
+      line-height: 1.6;
     }
 
     .progress-row {
@@ -919,40 +1180,52 @@
         </section>
 
         <section class="cards">
+          <article class="panel health-panel">
+            <div class="health-head">
+              <h2 class="panel-title">索引健康状态</h2>
+              <span class="health-badge" id="healthBadge">运行正常</span>
+            </div>
+            <div class="health-body">
+              <div class="health-summary">
+                <div class="health-line"><span id="healthSummary">已完成 0 / 共 0 个文件</span><strong id="healthRate">0%</strong></div>
+                <div class="health-progress"><span id="healthProgress"></span></div>
+                <div class="health-note" id="healthNote">暂无需要处理的索引任务</div>
+              </div>
+              <div class="recent-section">
+                <div class="recent-section-title">最近索引动态</div>
+                <div class="recent-upload-list" id="recentUploadList">
+                  <div class="recent-empty">暂无近期上传文件。</div>
+                </div>
+              </div>
+            </div>
+            <div class="progress-row"><span>完成率 <strong id="taskRate">0%</strong></span><div class="progress"><span id="taskProgress"></span></div></div>
+          </article>
+
+          <article class="panel">
+            <h2 class="panel-title">近 15 日新增</h2>
+            <div class="bar-chart" id="barChart">
+            </div>
+            <div class="panel-foot"><span>新增总数 <strong id="trendTotal">0</strong></span><span>日均新增 <strong id="trendAverage">0</strong></span></div>
+          </article>
+
           <article class="panel type-panel">
             <h2 class="panel-title">类型分布</h2>
-            <div class="donut-row">
-              <div class="donut" id="typeDonut"><div class="donut-center"><span id="typeTotal">10,072</span><span>总数量</span></div></div>
-              <div>
+            <div class="type-body">
+              <div class="donut-row">
+                <div class="donut" id="typeDonut"><div class="donut-center"><span id="typeTotal">10,072</span><span>总数量</span></div></div>
                 <div class="legend type-legend">
                   <div class="legend-row"><span class="dot" style="--c:#1378ff"></span><span class="legend-label"><span>文档</span><small id="docLegend">8,462 个</small></span><strong id="docPercent">84.0%</strong></div>
                   <div class="legend-row"><span class="dot" style="--c:#20c79b"></span><span class="legend-label"><span>视频</span><small id="videoLegend">326 个</small></span><strong id="videoPercent">3.2%</strong></div>
                   <div class="legend-row"><span class="dot" style="--c:#8467ff"></span><span class="legend-label"><span>图片</span><small id="imageLegend">1,284 张</small></span><strong id="imagePercent">12.8%</strong></div>
                 </div>
               </div>
-            </div>
-            <div class="panel-foot"><span>总数量 <strong id="typeFootTotal">10,072</strong></span><span>总存储 <strong id="typeFootStorage">481.4 GB</strong></span></div>
-          </article>
-
-          <article class="panel">
-            <h2 class="panel-title">近 7 日新增</h2>
-            <div class="bar-chart" id="barChart">
-            </div>
-            <div class="panel-foot"><span>新增总数 <strong id="trendTotal">0</strong></span><span>日均新增 <strong id="trendAverage">0</strong></span></div>
-          </article>
-
-          <article class="panel">
-            <h2 class="panel-title">索引任务概览</h2>
-            <div class="task-grid">
-              <div class="donut task-donut"><div class="donut-center"><span id="taskTotal">10,072</span><span>总任务</span></div></div>
-              <div class="legend task-legend">
-                <div class="legend-row"><span class="dot" style="--c:#20c79b"></span><span>已索引</span><strong id="indexedTask">9,472 (94%)</strong></div>
-                <div class="legend-row"><span class="dot" style="--c:#32a5ff"></span><span>索引中</span><strong id="indexingTask">312 (3%)</strong></div>
-                <div class="legend-row"><span class="dot" style="--c:#ff9239"></span><span>失败</span><strong id="failedTask">126 (1%)</strong></div>
-                <div class="legend-row"><span class="dot" style="--c:#8997ad"></span><span>待处理</span><strong id="pendingTask">0 (0%)</strong></div>
+              <div class="type-bars">
+                <div class="type-bar-row"><span>文档</span><div class="type-bar-track"><span id="docBar" style="--c:#1378ff"></span></div><span id="docBarPercent">84.0%</span></div>
+                <div class="type-bar-row"><span>视频</span><div class="type-bar-track"><span id="videoBar" style="--c:#20c79b"></span></div><span id="videoBarPercent">3.2%</span></div>
+                <div class="type-bar-row"><span>图片</span><div class="type-bar-track"><span id="imageBar" style="--c:#8467ff"></span></div><span id="imageBarPercent">12.8%</span></div>
               </div>
             </div>
-            <div class="progress-row"><span>完成率 <strong id="taskRate">94%</strong></span><div class="progress"><span id="taskProgress"></span></div></div>
+            <div class="panel-foot"><span>总数量 <strong id="typeFootTotal">10,072</strong></span><span>总存储 <strong id="typeFootStorage">481.4 GB</strong></span></div>
           </article>
         </section>
 
@@ -974,6 +1247,25 @@
       return Number(value || 0).toLocaleString("zh-CN");
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function dateLabelHtml(date) {
+      const raw = String(date || "");
+      const parts = raw.split("-");
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        return `<span>${escapeHtml(parts[0])}</span><span>${escapeHtml(parts.slice(1).join("-"))}</span>`;
+      }
+      return `<span>${escapeHtml(raw)}</span>`;
+    }
+
     function parseCount(text) {
       return Number(String(text || "0").replace(/,/g, ""));
     }
@@ -981,16 +1273,110 @@
     function renderBars(days = []) {
       const chart = document.getElementById("barChart");
       chart.innerHTML = "";
-      const values = days.length ? days : Array.from({ length: 7 }, (_, index) => ({ date: `--${index + 1}`, count: 0 }));
+      const values = days.length ? days : Array.from({ length: 15 }, (_, index) => ({ date: `--${index + 1}`, count: 0 }));
       const maxValue = Math.max(...values.map((item) => Number(item.count || 0)), 1);
       values.forEach((item, index) => {
         const value = Number(item.count || 0);
         const color = index === values.length - 1 ? "#1378ff" : "#27c99d";
         const wrap = document.createElement("div");
         wrap.className = "bar-wrap";
-        wrap.innerHTML = `<div class="bar" data-v="${value}" style="--h:${Math.max(6, value / maxValue * 100)}%; --c:${color}"></div><span>${item.date}</span>`;
+        wrap.innerHTML = `<div class="bar" data-v="${value}" style="--h:${Math.max(6, value / maxValue * 100)}%; --c:${color}"></div><span class="bar-label">${dateLabelHtml(item.date)}</span>`;
         chart.appendChild(wrap);
       });
+    }
+
+    function fileIconText(type) {
+      const value = String(type || "").toLowerCase().replace(".", "");
+      if (!value) return "FILE";
+      if (value.includes("video") || ["mp4", "mov", "avi"].includes(value)) return "MP4";
+      if (value.includes("image") || ["png", "jpg", "jpeg", "gif"].includes(value)) return "IMG";
+      if (value.length > 4) return value.slice(0, 4);
+      return value;
+    }
+
+    function statusLabel(status) {
+      const map = {
+        indexed: "已索引",
+        indexing: "索引中",
+        failed: "失败",
+        pending: "待处理"
+      };
+      return map[status] || "待处理";
+    }
+
+    function statusClass(status) {
+      if (["indexed", "indexing", "failed"].includes(status)) return status;
+      return "pending";
+    }
+
+    function formatRecentTime(value) {
+      if (!value) return "-";
+      const text = String(value).replace("T", " ").slice(0, 16);
+      const parts = text.split(" ");
+      if (parts.length < 2) return text;
+      return `${parts[0].slice(5)} ${parts[1]}`;
+    }
+
+    function renderIndexHealth(resources = [], counts = {}) {
+      const list = document.getElementById("recentUploadList");
+      const totalCount = resources.length;
+      const indexedCount = Number(counts.indexed || 0);
+      const indexingCount = Number(counts.indexing || 0);
+      const failedCount = Number(counts.failed || 0);
+      const pendingCount = Number(counts.pending || 0);
+      const progress = totalCount ? Math.round(indexedCount / totalCount * 100) : 0;
+      const badge = document.getElementById("healthBadge");
+      const healthNote = document.getElementById("healthNote");
+      const healthSummary = document.getElementById("healthSummary");
+      const healthRate = document.getElementById("healthRate");
+      const healthProgress = document.getElementById("healthProgress");
+
+      badge.className = "health-badge";
+      if (failedCount > 0) {
+        badge.textContent = "需要处理";
+        badge.classList.add("danger");
+        healthNote.textContent = `失败 ${numberText(failedCount)} 个，建议进入详情页查看原因`;
+      } else if (indexingCount + pendingCount > 0) {
+        badge.textContent = "索引进行中";
+        badge.classList.add("warning");
+        healthNote.textContent = `索引中 ${numberText(indexingCount)} 个，待处理 ${numberText(pendingCount)} 个`;
+      } else {
+        badge.textContent = "运行正常";
+        healthNote.textContent = totalCount ? "暂无需要处理的索引任务" : "暂无上传文件，上传后会在这里显示索引状态";
+      }
+
+      healthSummary.textContent = `已完成 ${numberText(indexedCount)} / 共 ${numberText(totalCount)} 个文件`;
+      healthRate.textContent = `${progress}%`;
+      healthProgress.style.width = `${progress}%`;
+
+      const recent = [...resources]
+        .sort((a, b) => {
+          const priority = { failed: 0, indexing: 1, pending: 2, indexed: 3 };
+          const statusDiff = (priority[statusClass(a.status)] ?? 2) - (priority[statusClass(b.status)] ?? 2);
+          if (statusDiff) return statusDiff;
+          return String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || ""));
+        })
+        .slice(0, 3);
+      if (!recent.length) {
+        list.innerHTML = '<div class="recent-empty">暂无近期上传文件。</div>';
+        return;
+      }
+      list.innerHTML = recent.map((item) => {
+        const status = statusClass(item.status);
+        const title = item.title || "未命名文件";
+        const category = item.category || "未分类";
+        const time = formatRecentTime(item.updated_at || item.created_at);
+        return `
+          <div class="recent-upload-item">
+            <span class="recent-file-icon">${escapeHtml(fileIconText(item.file_type))}</span>
+            <div class="recent-file-main">
+              <div class="recent-file-name" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+              <div class="recent-file-meta">${escapeHtml(category)} · ${escapeHtml(time)}</div>
+            </div>
+            <span class="recent-status ${status}">${escapeHtml(statusLabel(status))}</span>
+          </div>
+        `;
+      }).join("");
     }
 
     async function loadOverview() {
@@ -1022,6 +1408,7 @@
       const progress = resources.length ? Math.round(indexed / resources.length * 100) : 0;
       const trend = dashboard.overview?.trend || {};
       renderBars(trend.days || []);
+      renderIndexHealth(resources, { indexed, indexing, failed, pending });
 
       document.getElementById("kbTotal").textContent = dashboard.stats?.totalKnowledgeBases || 3;
       document.getElementById("docTotal").textContent = numberText(docCount);
@@ -1043,14 +1430,15 @@
       document.getElementById("docPercent").textContent = `${docPercent.toFixed(1)}%`;
       document.getElementById("videoPercent").textContent = `${videoPercent.toFixed(1)}%`;
       document.getElementById("imagePercent").textContent = `${imagePercent.toFixed(1)}%`;
+      document.getElementById("docBarPercent").textContent = `${docPercent.toFixed(1)}%`;
+      document.getElementById("videoBarPercent").textContent = `${videoPercent.toFixed(1)}%`;
+      document.getElementById("imageBarPercent").textContent = `${imagePercent.toFixed(1)}%`;
+      document.getElementById("docBar").style.width = `${docPercent}%`;
+      document.getElementById("videoBar").style.width = `${videoPercent}%`;
+      document.getElementById("imageBar").style.width = `${imagePercent}%`;
       document.getElementById("typeDonut").style.setProperty("--a", `${docPercent}%`);
       document.getElementById("typeDonut").style.setProperty("--b", `${docPercent + videoPercent}%`);
 
-      document.getElementById("taskTotal").textContent = numberText(resources.length);
-      document.getElementById("indexedTask").textContent = `${numberText(indexed)} (${progress}%)`;
-      document.getElementById("indexingTask").textContent = `${numberText(indexing)} (${resources.length ? Math.round(indexing / resources.length * 100) : 0}%)`;
-      document.getElementById("failedTask").textContent = `${numberText(failed)} (${resources.length ? Math.round(failed / resources.length * 100) : 0}%)`;
-      document.getElementById("pendingTask").textContent = `${numberText(pending)} (${resources.length ? Math.round(pending / resources.length * 100) : 0}%)`;
       document.getElementById("taskRate").textContent = `${progress}%`;
       document.getElementById("taskProgress").style.width = `${progress}%`;
       document.getElementById("trendTotal").textContent = numberText(trend.total || 0);

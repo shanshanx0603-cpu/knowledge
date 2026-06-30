@@ -3,337 +3,550 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>个人中心</title>
+  <title>账号管理</title>
   <style>
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background:
-        radial-gradient(circle at 18% 0%, rgba(45, 117, 255, .12), transparent 30%),
-        radial-gradient(circle at 82% 12%, rgba(32, 199, 190, .12), transparent 28%),
-        linear-gradient(145deg, #f7fbff, #e2f0ff);
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: linear-gradient(145deg, #f7fbff, #e4f0ff);
       color: #071a3d;
       font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
     }
-    .profile-shell,
-    .login-shell {
-      width: min(92vw, 460px);
-      padding: 30px;
-      border-radius: 18px;
-      border: 1px solid rgba(80, 132, 220, 0.18);
-      background: rgba(255, 255, 255, 0.84);
-      box-shadow: 0 26px 70px rgba(34, 93, 178, 0.18);
+    .page {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: clamp(48px, 8.8vh, 72px) minmax(0, 1fr);
     }
-    .profile-shell {
-      width: min(92vw, 560px);
+    .admin-layout {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 22px;
+      padding: 20px 28px 22px 16px;
+      align-items: stretch;
     }
-    .brand {
+    .admin-main {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      gap: 18px;
+      overflow: auto;
+    }
+    .panel,
+    .side {
+      border: 1px solid rgba(80, 132, 220, 0.16);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 20px 50px rgba(34, 93, 178, 0.12);
+    }
+    .topbar {
+      min-height: 0;
+      padding: 0 14px;
       display: flex;
       align-items: center;
-      margin-bottom: 26px;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid rgba(72, 111, 172, 0.12);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(18px);
     }
-    .brand-logo {
-      width: 190px;
-      height: 50px;
-      object-fit: contain;
-      display: block;
-    }
-    h1 {
-      margin: 0;
-      color: #092253;
-      font-size: 28px;
-      font-weight: 950;
-    }
-    .sub {
-      margin: 10px 0 24px;
-      color: #617293;
-      font-size: 14px;
-      font-weight: 750;
-      line-height: 1.7;
-    }
-    form {
+    .brand-logo { width: 136px; height: 36px; object-fit: contain; display: block; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .side {
+      min-height: 0;
+      padding: 20px 12px;
       display: grid;
+      grid-template-rows: 1fr auto;
+    }
+    .nav {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+    .nav a,
+    .upload {
+      min-height: 56px;
+      padding: 0 14px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #233b70;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .nav a.active {
+      color: #0069ff;
+      background: linear-gradient(90deg, rgba(0,111,255,.14), rgba(0,111,255,.04));
+      box-shadow: inset 3px 0 0 #0b72ff, 0 10px 24px rgba(33,116,255,.10);
+    }
+    .nav svg,
+    .upload svg { width: 23px; height: 23px; flex: 0 0 auto; }
+    .back-btn,
+    .logout-btn,
+    .primary-btn,
+    .ghost-btn,
+    .danger-btn {
+      height: 40px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .back-btn,
+    .primary-btn { color: #fff; background: #126cff; }
+    .ghost-btn { color: #1f4d87; background: #eef5ff; }
+    .danger-btn,
+    .logout-btn { color: #c53737; background: #fff0f0; }
+    .content { display: grid; gap: 18px; }
+    .panel { padding: 20px; }
+    .hero {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    h1, h2 { margin: 0; color: #092253; font-weight: 950; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; }
+    .sub { margin: 8px 0 0; color: #617293; font-size: 14px; font-weight: 750; line-height: 1.7; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
     }
-    label {
-      display: grid;
-      gap: 8px;
-      color: #31466e;
-      font-size: 13px;
-      font-weight: 900;
+    .stat {
+      min-height: 96px;
+      padding: 16px;
+      border: 1px solid #e0ebf8;
+      border-radius: 10px;
+      background: #f8fbff;
     }
-    input {
-      width: 100%;
-      height: 44px;
-      padding: 0 13px;
-      border-radius: 9px;
-      border: 1px solid rgba(72, 128, 224, 0.18);
-      background: rgba(255, 255, 255, 0.86);
+    .stat span { display: block; color: #607293; font-size: 13px; font-weight: 850; }
+    .stat strong { display: block; margin-top: 10px; color: #092253; font-size: 28px; font-weight: 950; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .search {
+      width: min(360px, 100%);
+      height: 40px;
+      border: 1px solid #d9e5f5;
+      border-radius: 8px;
+      padding: 0 12px;
       color: #17325e;
+      background: #f8fbff;
       font-size: 14px;
       font-weight: 800;
       outline: none;
     }
-    .login-btn,
-    .logout-btn,
-    .back-btn {
-      height: 44px;
-      margin-top: 6px;
-      border: 0;
-      border-radius: 9px;
-      color: #fff;
-      background: linear-gradient(145deg, #1378ff, #006dff);
-      font-size: 15px;
-      font-weight: 950;
-      cursor: pointer;
-      box-shadow: 0 12px 26px rgba(19, 120, 255, 0.22);
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .user-table col:nth-child(1) { width: 150px; }
+    .user-table col:nth-child(2) { width: 96px; }
+    .user-table col:nth-child(3) { width: 96px; }
+    .user-table col:nth-child(4) { width: 34%; }
+    .user-table col:nth-child(5) { width: 22%; }
+    .user-table col:nth-child(6) { width: 170px; }
+    .user-table col:nth-child(7) { width: 140px; }
+    th, td {
+      padding: 13px 10px;
+      border-bottom: 1px solid #e7eef8;
+      text-align: left;
+      color: #294367;
+      font-size: 13px;
+      font-weight: 800;
+      vertical-align: middle;
     }
-    .logout-btn {
-      width: 100%;
-      margin-top: 18px;
-      background: linear-gradient(145deg, #ff5f5f, #e83d3d);
-      box-shadow: 0 12px 26px rgba(232, 61, 61, 0.18);
+    th { color: #607293; background: #f8fbff; }
+    td strong { color: #092253; font-size: 14px; }
+    .user-table th:nth-child(2),
+    .user-table th:nth-child(3),
+    .user-table th:nth-child(7),
+    .user-table td:nth-child(2),
+    .user-table td:nth-child(3),
+    .user-table td:nth-child(7) {
+      text-align: center;
     }
-    .back-btn {
-      width: 100%;
-      height: 52px;
-      margin-top: 18px;
+    .user-table td {
+      line-height: 1.45;
+    }
+    .badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
-      background: linear-gradient(145deg, #1378ff, #006dff);
-      text-decoration: none;
-      font-size: 16px;
-      letter-spacing: 0;
-      box-shadow: 0 14px 30px rgba(19, 120, 255, 0.22);
-    }
-    .back-btn:hover {
-      filter: brightness(1.03);
-      transform: translateY(-1px);
-    }
-    .hint {
-      color: #607293;
+      min-width: 52px;
+      height: 26px;
+      border-radius: 7px;
+      color: #126cff;
+      background: #edf5ff;
       font-size: 12px;
-      font-weight: 750;
-      line-height: 1.5;
+      font-weight: 950;
     }
-    .hidden { display: none; }
-    .message {
-      min-height: 18px;
-      color: #e04444;
-      font-size: 13px;
-      font-weight: 850;
-    }
-    .message.success { color: #0aa97b; }
-    .meta {
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 10px;
-      color: #40577d;
-      background: rgba(239, 246, 255, 0.78);
-      border: 1px solid rgba(72, 128, 224, 0.12);
-      font-size: 13px;
-      font-weight: 800;
-      line-height: 1.7;
-    }
-    .profile-card {
+    .badge.admin { color: #8a5a00; background: #fff4d8; }
+    .badge.disabled { color: #9a4b4b; background: #fff0f0; }
+    .row-actions { display: flex; justify-content: center; gap: 8px; }
+    .row-actions button { height: 32px; padding: 0 10px; font-size: 12px; }
+    .grid-form {
       display: grid;
-      gap: 16px;
-      margin-top: 22px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      align-items: end;
     }
-    .profile-head {
-      display: flex;
-      align-items: start;
-      justify-content: space-between;
-      gap: 18px;
+    label { display: grid; gap: 7px; color: #31466e; font-size: 13px; font-weight: 900; }
+    input, select {
+      width: 100%;
+      height: 40px;
+      border: 1px solid #d9e5f5;
+      border-radius: 8px;
+      padding: 0 12px;
+      color: #17325e;
+      background: #f8fbff;
+      font-size: 14px;
+      font-weight: 800;
+      outline: none;
     }
-    .profile-head h1 {
-      margin-top: 0;
+    .message { min-height: 18px; color: #e04444; font-size: 13px; font-weight: 850; }
+    .message.success { color: #0aa97b; }
+    .login-shell {
+      width: min(92vw, 520px);
+      margin: 10vh auto;
+      padding: 30px;
     }
-    .profile-head .sub {
-      margin-bottom: 0;
+    .profile-main {
+      align-content: start;
     }
-    .profile-head .logout-btn {
-      width: auto;
-      min-width: 118px;
-      margin-top: 0;
-      padding: 0 18px;
-      flex: 0 0 auto;
+    .profile-panel {
+      max-width: 760px;
+      width: 100%;
     }
+    .profile-card { display: grid; gap: 12px; margin-top: 18px; }
     .info-row {
       display: grid;
       grid-template-columns: 110px minmax(0, 1fr);
-      align-items: center;
       gap: 14px;
       padding: 14px;
-      border-radius: 12px;
-      background: rgba(239, 246, 255, 0.78);
-      border: 1px solid rgba(72, 128, 224, 0.12);
+      border-radius: 10px;
+      background: #f8fbff;
+      border: 1px solid #e0ebf8;
     }
-    .info-label {
-      color: #607293;
-      font-size: 13px;
-      font-weight: 900;
-    }
-    .info-value {
-      min-width: 0;
-      color: #092253;
-      font-size: 15px;
-      font-weight: 950;
-      overflow-wrap: anywhere;
-    }
-    .profile-loading {
-      margin-top: 20px;
-      color: #607293;
-      font-size: 14px;
-      font-weight: 850;
-    }
-    .admin-panel {
-      margin-top: 22px;
-      padding: 18px;
-      border-radius: 14px;
-      background: rgba(246, 250, 255, 0.86);
-      border: 1px solid rgba(72, 128, 224, 0.14);
-    }
-    .admin-panel h2 {
-      margin: 0 0 8px;
-      color: #092253;
-      font-size: 20px;
-      font-weight: 950;
-    }
-    .admin-panel .sub {
-      margin-bottom: 16px;
-    }
-    .create-user-btn {
-      height: 44px;
-      border: 0;
-      border-radius: 9px;
-      color: #fff;
-      background: linear-gradient(145deg, #1378ff, #006dff);
-      font-size: 15px;
-      font-weight: 950;
-      cursor: pointer;
-      box-shadow: 0 12px 26px rgba(19, 120, 255, 0.22);
+    .info-label { color: #607293; font-weight: 900; }
+    .info-value { color: #092253; font-weight: 950; overflow-wrap: anywhere; }
+    .hidden { display: none !important; }
+    @media (max-width: 1180px) {
+      .page { min-width: 1180px; min-height: 760px; }
+      body { overflow: auto; }
     }
   </style>
   <link rel="stylesheet" href="assets/app-common.css" />
 </head>
 <body>
-  <main class="profile-shell hidden" id="profileView">
-    <div class="brand">
+  <main class="page hidden" id="adminView">
+    <header class="topbar">
       <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
-    </div>
-    <div class="profile-head">
-      <div>
-        <h1>个人信息</h1>
-        <p class="sub">当前登录账号信息如下。退出登录后会返回登录管理页面。</p>
+      <div class="top-actions">
+        <a class="back-btn" href="overview.html">进入首页</a>
+        <button class="logout-btn" id="adminLogoutButton" type="button">退出登录</button>
       </div>
-      <button class="logout-btn" id="logoutButton" type="button">退出登录</button>
-    </div>
-    <div class="profile-card">
-      <div class="info-row">
-        <span class="info-label">用户名</span>
-        <span class="info-value" id="profileName">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">账号类型</span>
-        <span class="info-value" id="profileType">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">权限范围</span>
-        <span class="info-value" id="profileScope">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">向量 Bucket</span>
-        <span class="info-value" id="profileBucket">-</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">最近登录</span>
-        <span class="info-value" id="profileLastLogin">-</span>
-      </div>
-    </div>
-    <section class="admin-panel hidden" id="adminPanel">
-      <h2>账号分配</h2>
-      <p class="sub">仅管理员可以创建普通用户账号。用户名需为中文，密码需为英文和数字组合，至少 8 个字符。</p>
-      <form id="createUserForm">
-        <label>
-          新用户姓名
-          <input id="newAccount" autocomplete="off" placeholder="请输入中文用户名" />
-        </label>
-        <label>
-          初始密码
-          <input id="newPassword" autocomplete="new-password" type="password" placeholder="请输入英文+数字密码" />
-        </label>
-        <div class="message" id="createUserMessage"></div>
-        <button class="create-user-btn" id="createUserButton" type="submit">创建账号</button>
-      </form>
+    </header>
+
+    <section class="admin-layout">
+      <aside class="side">
+        <nav class="nav"></nav>
+        <a class="upload" href="upload.html"></a>
+      </aside>
+
+      <section class="admin-main">
+    <section class="panel hero">
+              <div>
+                <h1>用户管理看板</h1>
+                <p class="sub">管理员可以管理用户账号，查看每个用户的资源、调用和账单统计。管理员账号不提供上传文件入口。</p>
+              </div>
+              <button class="primary-btn" id="refreshButton" type="button">刷新数据</button>
+            </section>
+        
+            <section class="stats" id="adminStats"></section>
+        
+            <section class="panel">
+              <div class="toolbar">
+                <div>
+                  <h2>用户列表</h2>
+                  <p class="sub">支持新增、编辑、删除用户；有文件关联的用户暂不允许删除。</p>
+                </div>
+                <input class="search" id="userSearch" placeholder="搜索用户名、角色或 bucket" />
+              </div>
+              <table class="user-table">
+                <colgroup>
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>用户</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>账号信息</th>
+                    <th>账单信息</th>
+                    <th>最近登录</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="userRows"></tbody>
+              </table>
+              <div class="message" id="tableMessage"></div>
+            </section>
+        
+            <section class="panel">
+              <h2 id="formTitle">新增用户</h2>
+              <p class="sub">用户名必须为中文。新建用户必须填写密码；编辑用户时密码留空则不修改。</p>
+              <form class="grid-form" id="userForm">
+                <input type="hidden" id="editUserId" />
+                <label>用户名<input id="userName" placeholder="请输入中文用户名" /></label>
+                <label>登录账号<input id="loginAccount" placeholder="默认同用户名，管理员可保留 admin" /></label>
+                <label>角色<input id="userRole" placeholder="普通用户" /></label>
+                <label>账号类型
+                  <select id="userType">
+                    <option value="user">普通用户</option>
+                    <option value="admin">管理员</option>
+                  </select>
+                </label>
+                <label>状态
+                  <select id="userStatus">
+                    <option value="正常">正常</option>
+                    <option value="停用">停用</option>
+                  </select>
+                </label>
+                <label>权限范围<input id="userScope" placeholder="仅本人上传" /></label>
+                <label>密码<input id="userPassword" type="password" autocomplete="new-password" placeholder="英文+数字，至少8位" /></label>
+                <button class="primary-btn" id="saveUserButton" type="submit">保存用户</button>
+                <button class="ghost-btn" id="resetFormButton" type="button">清空</button>
+              </form>
+              <div class="message" id="formMessage"></div>
+            </section>
+        
+      </section>
     </section>
-    <a class="back-btn" href="overview.html">进入首页</a>
   </main>
 
-  <main class="login-shell hidden" id="loginView">
-    <div class="brand">
+  <main class="page hidden" id="profileView">
+    <header class="topbar">
       <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
-    </div>
+      <div class="top-actions">
+        <a class="back-btn" href="overview.html">进入首页</a>
+        <button class="logout-btn" id="logoutButton" type="button">退出登录</button>
+      </div>
+    </header>
+
+    <section class="admin-layout">
+      <aside class="side">
+        <nav class="nav"></nav>
+        <a class="upload" href="upload.html"></a>
+      </aside>
+
+      <section class="admin-main profile-main">
+        <section class="panel hero">
+          <div>
+            <h1>个人信息</h1>
+            <p class="sub">查看当前登录账号、权限范围和知识库配置。</p>
+          </div>
+        </section>
+
+        <section class="panel profile-panel">
+          <h2>账号资料</h2>
+          <div class="profile-card">
+            <div class="info-row"><span class="info-label">用户名</span><span class="info-value" id="profileName">-</span></div>
+            <div class="info-row"><span class="info-label">账号类型</span><span class="info-value" id="profileType">-</span></div>
+            <div class="info-row"><span class="info-label">权限范围</span><span class="info-value" id="profileScope">-</span></div>
+            <div class="info-row"><span class="info-label">向量 Bucket</span><span class="info-value" id="profileBucket">-</span></div>
+            <div class="info-row"><span class="info-label">最近登录</span><span class="info-value" id="profileLastLogin">-</span></div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <main class="panel login-shell hidden" id="loginView">
+    <img class="brand-logo" src="assets/logo.png" alt="数智云工" />
     <h1>登录管理</h1>
-    <p class="sub">请输入账号密码进入知识库中台。管理员可查看全部内容，普通用户仅查看自己上传的文件。</p>
+    <p class="sub">请输入账号密码进入知识库中台。也可以在任意页面点击右上角头像登录。</p>
     <form id="loginForm">
-      <label>
-        用户名
-        <input id="account" autocomplete="username" placeholder="请输入用户名" />
-      </label>
-      <label>
-        密码
-        <input id="password" autocomplete="current-password" type="password" placeholder="请输入密码" />
-      </label>
+      <label>用户名<input id="account" autocomplete="username" placeholder="请输入用户名" /></label>
+      <label>密码<input id="password" autocomplete="current-password" type="password" placeholder="请输入密码" /></label>
       <div class="message" id="message"></div>
-      <button class="login-btn" type="submit">登录</button>
+      <button class="primary-btn" id="loginButton" type="submit">登录</button>
     </form>
-    <div class="meta">当前仅支持管理员分配账号。管理员账号：admin。</div>
   </main>
 
   <script src="assets/app-common.js"></script>
   <script>
-    localStorage.removeItem("adminToken");
+    const adminView = document.getElementById("adminView");
     const profileView = document.getElementById("profileView");
     const loginView = document.getElementById("loginView");
     const form = document.getElementById("loginForm");
     const accountInput = document.getElementById("account");
     const passwordInput = document.getElementById("password");
-    const submitButton = document.querySelector(".login-btn");
-    const message = document.getElementById("message");
+    const loginButton = document.getElementById("loginButton");
     const logoutButton = document.getElementById("logoutButton");
-    const adminPanel = document.getElementById("adminPanel");
-    const createUserForm = document.getElementById("createUserForm");
-    const newAccountInput = document.getElementById("newAccount");
-    const newPasswordInput = document.getElementById("newPassword");
-    const createUserMessage = document.getElementById("createUserMessage");
-    const createUserButton = document.getElementById("createUserButton");
+    const adminLogoutButton = document.getElementById("adminLogoutButton");
+    const userRows = document.getElementById("userRows");
+    const adminStats = document.getElementById("adminStats");
+    const userSearch = document.getElementById("userSearch");
+    const userForm = document.getElementById("userForm");
+    const formMessage = document.getElementById("formMessage");
+    const tableMessage = document.getElementById("tableMessage");
+    const editUserId = document.getElementById("editUserId");
+    const userName = document.getElementById("userName");
+    const loginAccount = document.getElementById("loginAccount");
+    const userRole = document.getElementById("userRole");
+    const userType = document.getElementById("userType");
+    const userStatus = document.getElementById("userStatus");
+    const userScope = document.getElementById("userScope");
+    const userPassword = document.getElementById("userPassword");
+    const formTitle = document.getElementById("formTitle");
+    let adminUsers = [];
 
-    function clearLoginState() {
-      localStorage.removeItem("currentUser");
-      localStorage.removeItem("sessionToken");
-      localStorage.removeItem("adminToken");
+    function hideAll() {
+      adminView.classList.add("hidden");
+      profileView.classList.add("hidden");
+      loginView.classList.add("hidden");
     }
 
     function showLoginView() {
-      profileView.classList.add("hidden");
+      hideAll();
       loginView.classList.remove("hidden");
     }
 
     function showProfileView(user) {
-      loginView.classList.add("hidden");
+      hideAll();
       profileView.classList.remove("hidden");
+      KnowledgeApp.renderNav();
       document.getElementById("profileName").textContent = user.name || user.login_account || "-";
       document.getElementById("profileType").textContent = user.account_type === "admin" ? "管理员" : "普通用户";
       document.getElementById("profileScope").textContent = user.permission_scope || (user.account_type === "admin" ? "全部知识库" : "仅本人上传");
       document.getElementById("profileBucket").textContent = user.vector_bucket || "-";
       document.getElementById("profileLastLogin").textContent = user.last_login || "-";
-      adminPanel.classList.toggle("hidden", user.account_type !== "admin");
+    }
+
+    function formatMb(value) {
+      const mb = Number(value || 0);
+      if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`;
+      return `${mb.toFixed(2)} MB`;
+    }
+
+    function renderStats(totals) {
+      const items = [
+        ["用户总数", totals.users || 0],
+        ["管理员", totals.admins || 0],
+        ["文件总数", totals.resources || 0],
+        ["存储用量", formatMb(totals.storage_mb)],
+        ["调用次数", totals.calls || 0],
+      ];
+      adminStats.innerHTML = items.map(([label, value]) => `<article class="stat"><span>${label}</span><strong>${value}</strong></article>`).join("");
+    }
+
+    function renderUserRows() {
+      const query = userSearch.value.trim().toLowerCase();
+      const rows = adminUsers.filter((user) => {
+        const text = `${user.name || ""} ${user.role || ""} ${user.vector_bucket || ""} ${user.permission_scope || ""}`.toLowerCase();
+        return !query || text.includes(query);
+      });
+      if (!rows.length) {
+        userRows.innerHTML = '<tr><td colspan="7">暂无用户数据</td></tr>';
+        return;
+      }
+      userRows.innerHTML = rows.map((user) => {
+        const billing = user.billing || {};
+        const disabled = user.status === "停用";
+        return `
+          <tr>
+            <td><strong>${user.name || "-"}</strong><br><span>${user.role || "-"}</span></td>
+            <td><span class="badge ${user.account_type === "admin" ? "admin" : ""}">${user.account_type === "admin" ? "管理员" : "用户"}</span></td>
+            <td><span class="badge ${disabled ? "disabled" : ""}">${user.status || "正常"}</span></td>
+            <td>
+              账号：${user.login_account || "-"}<br>
+              Bucket：${user.vector_bucket || "-"}<br>
+              权限：${user.permission_scope || "-"}
+            </td>
+            <td>
+              文件 ${billing.resource_count || 0} 个 / ${formatMb(billing.storage_mb)}<br>
+              已索引 ${billing.indexed_count || 0}，索引中 ${billing.indexing_count || 0}，失败 ${billing.failed_count || 0}<br>
+              调用 ${billing.call_count || 0} 次
+            </td>
+            <td>${user.last_login || "-"}<br>${billing.last_activity ? `最近操作：${billing.last_activity}` : ""}</td>
+            <td><div class="row-actions">
+              <button class="ghost-btn" type="button" data-action="edit" data-id="${user.id}">编辑</button>
+              <button class="danger-btn" type="button" data-action="delete" data-id="${user.id}">删除</button>
+            </div></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function loadAdminUsers() {
+      tableMessage.textContent = "";
+      const response = await fetch(KnowledgeApp.apiUrl("/api/admin/users"));
+      const data = await response.json();
+      if (!response.ok) {
+        tableMessage.textContent = data.error || "用户看板加载失败";
+        return;
+      }
+      adminUsers = data.items || [];
+      renderStats(data.totals || {});
+      renderUserRows();
+    }
+
+    function resetUserForm() {
+      editUserId.value = "";
+      userName.value = "";
+      loginAccount.value = "";
+      userRole.value = "普通用户";
+      userType.value = "user";
+      userStatus.value = "正常";
+      userScope.value = "仅本人上传";
+      userPassword.value = "";
+      formTitle.textContent = "新增用户";
+      formMessage.textContent = "";
+    }
+
+    function editUser(user) {
+      editUserId.value = user.id;
+      userName.value = user.name || "";
+      loginAccount.value = user.login_account || user.name || "";
+      userRole.value = user.role || "普通用户";
+      userType.value = user.account_type || "user";
+      userStatus.value = user.status || "正常";
+      userScope.value = user.permission_scope || "";
+      userPassword.value = "";
+      formTitle.textContent = `编辑用户：${user.name}`;
+      formMessage.textContent = "";
+    }
+
+    function validChineseUsername(value) {
+      return /^[\u4e00-\u9fff]{2,20}$/.test(value);
+    }
+
+    function validPassword(value) {
+      return /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(value);
     }
 
     async function loadProfile() {
@@ -347,109 +560,131 @@
         const response = await fetch(KnowledgeApp.apiUrl("/api/profile"));
         const data = await response.json();
         if (!response.ok || !data.user) {
-          clearLoginState();
+          KnowledgeApp.clearCurrentUser();
           showLoginView();
           return;
         }
-        localStorage.setItem("currentUser", data.user.name);
-        showProfileView(data.user);
+        KnowledgeApp.setCurrentUser(data.user);
+        const viewMode = new URLSearchParams(location.search).get("view");
+        if (data.user.account_type === "admin" && viewMode !== "profile") {
+          hideAll();
+          adminView.classList.remove("hidden");
+          KnowledgeApp.renderNav();
+          await loadAdminUsers();
+        } else {
+          showProfileView(data.user);
+        }
       } catch (error) {
         console.warn("Profile unavailable", error);
         showLoginView();
       }
     }
 
-    function validChineseUsername(value) {
-      return /^[\u4e00-\u9fff]{2,20}$/.test(value);
-    }
-
-    function validPassword(value) {
-      return /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(value);
-    }
-
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      const message = document.getElementById("message");
       message.className = "message";
       message.textContent = "";
-      const account = accountInput.value.trim();
-      const password = passwordInput.value;
       try {
-        KnowledgeApp.setButtonLoading(submitButton, true, "登录中");
+        KnowledgeApp.setButtonLoading(loginButton, true, "登录中");
         const response = await fetch("/api/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            account,
-            password
-          })
+          body: JSON.stringify({ account: accountInput.value.trim(), password: passwordInput.value })
         });
         const data = await response.json();
         if (!response.ok) {
           message.textContent = data.error || "登录失败";
           return;
         }
-		        localStorage.setItem("currentUser", data.user.name);
-		        localStorage.setItem("sessionToken", data.user.sessionToken);
-		        message.className = "message success";
-		        message.textContent = "登录成功";
-		        showProfileView(data.user);
+        KnowledgeApp.setCurrentUser(data.user);
+        await loadProfile();
       } catch (error) {
         message.textContent = "登录接口暂时不可用";
-        console.warn("Login failed", error);
       } finally {
-        KnowledgeApp.setButtonLoading(submitButton, false);
+        KnowledgeApp.setButtonLoading(loginButton, false);
       }
-	    });
+    });
 
-    logoutButton.addEventListener("click", () => {
-      clearLoginState();
+    function logout() {
+      KnowledgeApp.clearCurrentUser();
       accountInput.value = "";
       passwordInput.value = "";
-      adminPanel.classList.add("hidden");
-      message.className = "message success";
-      message.textContent = "已退出登录";
       showLoginView();
+    }
+
+    logoutButton.addEventListener("click", logout);
+    adminLogoutButton.addEventListener("click", logout);
+    document.getElementById("refreshButton").addEventListener("click", loadAdminUsers);
+    userSearch.addEventListener("input", renderUserRows);
+    document.getElementById("resetFormButton").addEventListener("click", resetUserForm);
+
+    userRows.addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const user = adminUsers.find((item) => String(item.id) === String(button.dataset.id));
+      if (!user) return;
+      if (button.dataset.action === "edit") {
+        editUser(user);
+        return;
+      }
+      if (!confirm(`确定删除用户 ${user.name}？`)) return;
+      const response = await fetch(KnowledgeApp.apiUrl(`/api/users/${encodeURIComponent(user.id)}`), { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) {
+        tableMessage.textContent = data.error || "删除失败";
+        return;
+      }
+      await loadAdminUsers();
     });
 
-    createUserForm.addEventListener("submit", async (event) => {
+    userForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      createUserMessage.className = "message";
-      createUserMessage.textContent = "";
-      const account = newAccountInput.value.trim();
-      const password = newPasswordInput.value;
-      if (!validChineseUsername(account)) {
-        createUserMessage.textContent = "用户名必须为 2-20 个中文字符";
+      formMessage.className = "message";
+      formMessage.textContent = "";
+      const payload = {
+        name: userName.value.trim(),
+        login_account: loginAccount.value.trim(),
+        role: userRole.value.trim(),
+        account_type: userType.value,
+        status: userStatus.value,
+        permission_scope: userScope.value.trim(),
+        password: userPassword.value
+      };
+      if (!validChineseUsername(payload.name)) {
+        formMessage.textContent = "用户名必须为 2-20 个中文字符";
         return;
       }
-      if (!validPassword(password)) {
-        createUserMessage.textContent = "密码必须为英文+数字组合，且至少 8 个字符";
+      if (!editUserId.value && !validPassword(payload.password)) {
+        formMessage.textContent = "新建用户必须填写英文+数字组合且至少 8 位的密码";
         return;
       }
-      try {
-        KnowledgeApp.setButtonLoading(createUserButton, true, "创建中");
-        const response = await fetch(KnowledgeApp.apiUrl("/api/users"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ account, password })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          createUserMessage.textContent = data.error || "创建账号失败";
-          return;
-        }
-        createUserMessage.className = "message success";
-        createUserMessage.textContent = `账号 ${data.user.name} 创建成功`;
-        newAccountInput.value = "";
-        newPasswordInput.value = "";
-      } catch (error) {
-        createUserMessage.textContent = "账号创建接口暂时不可用";
-        console.warn("Create user failed", error);
-      } finally {
-        KnowledgeApp.setButtonLoading(createUserButton, false);
+      if (payload.password && !validPassword(payload.password)) {
+        formMessage.textContent = "密码必须为英文+数字组合，且至少 8 个字符";
+        return;
       }
+      const editing = Boolean(editUserId.value);
+      const url = editing ? `/api/users/${encodeURIComponent(editUserId.value)}` : "/api/users";
+      const method = editing ? "PUT" : "POST";
+      if (!editing) payload.account = payload.name;
+      const response = await fetch(KnowledgeApp.apiUrl(url), {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        formMessage.textContent = data.error || "保存失败";
+        return;
+      }
+      formMessage.className = "message success";
+      formMessage.textContent = "用户信息已保存";
+      resetUserForm();
+      await loadAdminUsers();
     });
 
+    resetUserForm();
     loadProfile();
-	  </script>
+  </script>
 </body>
 </html>

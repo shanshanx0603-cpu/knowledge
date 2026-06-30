@@ -12,6 +12,7 @@ import urllib.request
 import uuid
 import cgi
 import datetime
+import decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -489,18 +490,146 @@ def clean_source_url(value):
     return ""
 
 
+def source_object_location(metadata):
+    if not isinstance(metadata, dict):
+        return "", ""
+    bucket = str(metadata_value(
+        metadata,
+        [
+            "source_bucket",
+            "sourceBucket",
+            "original_bucket",
+            "originalBucket",
+            "file_bucket",
+            "fileBucket",
+            "oss_bucket",
+            "ossBucket",
+            "bucket_name",
+            "bucketName",
+        ],
+        "",
+    ) or "").strip()
+    key = str(metadata_value(
+        metadata,
+        [
+            "source_key",
+            "sourceKey",
+            "original_key",
+            "originalKey",
+            "file_key",
+            "fileKey",
+            "oss_object_key",
+            "ossObjectKey",
+            "object_key",
+            "objectKey",
+        ],
+        "",
+    ) or "").strip().lstrip("/")
+    url = clean_source_url(metadata_value(metadata, ["source_url", "sourceUrl", "file_url", "fileUrl", "url"], ""))
+    if url.startswith(("http://", "https://")) and (not bucket or not key):
+        parsed = urllib.parse.urlparse(url)
+        host = parsed.netloc
+        path_key = urllib.parse.unquote(parsed.path or "").lstrip("/")
+        if path_key:
+            key = key or path_key
+        if host and not bucket:
+            bucket = host.split(".")[0]
+    return bucket, key
+
+
+def source_proxy_download_url(metadata):
+    bucket, key = source_object_location(metadata)
+    if not bucket or not key:
+        return ""
+    query = urllib.parse.urlencode({"bucket": bucket, "key": key})
+    return f"/api/source-file/download?{query}"
+
+
 def display_name_from_url(value):
     value = str(value or "").strip()
     if not value.startswith(("http://", "https://")):
-        return value
+        name = Path(urllib.parse.unquote(value)).name
+        return name or value
     parsed = urllib.parse.urlparse(value)
     name = Path(urllib.parse.unquote(parsed.path or "")).name
     return name or value
 
 
+def is_temp_chunk_title(value):
+    value = str(value or "").strip()
+    if not value:
+        return False
+    lowered = value.lower().replace("\\", "/")
+    name = Path(lowered).name
+    return (
+        "/temp/" in lowered
+        or "/tmp/" in lowered
+        or "/appdata/local/temp/" in lowered
+        or bool(re.match(r"^tmp[a-z0-9_-]*\.txt$", name))
+    )
+
+
+def usable_display_title(value):
+    name = display_name_from_url(value)
+    return "" if is_temp_chunk_title(name) or is_temp_chunk_title(value) else name
+
+
+def first_usable_display_title(*values):
+    for value in values:
+        name = usable_display_title(value)
+        if name:
+            return name
+    return ""
+
+
+def needs_resource_resolution(hit):
+    title = str(hit.get("title") or "").strip()
+    source_url = str(hit.get("source_url") or "").strip()
+    key = str(hit.get("key") or "").strip()
+    return (
+        not hit.get("resource_id")
+        or not source_url
+        or title in {"", "未命名片段"}
+        or (key and title == key)
+        or is_temp_chunk_title(title)
+    )
+
+
 def markdown_frontmatter_value(text, key):
     match = re.search(rf"(?m)^{re.escape(key)}:\s*[\"']?([^\"'\n]+)[\"']?\s*$", str(text or ""))
     return match.group(1).strip() if match else ""
+
+
+def title_from_chunk_text(text):
+    text = str(text or "")
+    if not text.strip():
+        return ""
+    for key in [
+        "source_file",
+        "source",
+        "file_name",
+        "filename",
+        "title",
+        "原始文件",
+        "文件名",
+        "文档名称",
+        "文档标题",
+        "资料名称",
+    ]:
+        value = markdown_frontmatter_value(text, key)
+        if value:
+            return value
+    patterns = [
+        r"(?im)^\s*(?:source_file|source|file_name|filename|title|原始文件|文件名|文档名称|文档标题|资料名称)\s*[:：]\s*(.+?)\s*$",
+        r"(?im)^\s*\*\*(?:原始文件|文件名|文档名称|文档标题|资料名称)\*\*\s*[:：]\s*(.+?)\s*$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            value = re.sub(r"^[\"'`]+|[\"'`]+$", "", match.group(1).strip())
+            if value:
+                return value
+    return ""
 
 
 def clean_vector_chunk_text(text):
@@ -537,7 +666,9 @@ def normalize_vector_hit(hit, resource_lookup=None):
     if resource is None and resource_lookup and not resource_id and len(resource_lookup) == 1:
         resource = next(iter(resource_lookup.values()))
         resource_id = str(resource.get("id") or "")
-    title = metadata_value(metadata, ["title", "filename", "file_name", "file", "source_file", "source"], "")
+    metadata_title = metadata_value(metadata, ["title", "filename", "file_name", "file", "source_file", "source"], "")
+    location = metadata_value(metadata, ["OSSVECTORS-EMBED-SRC-LOCATION", "location", "path"], "")
+    chunk_key = metadata_value(metadata, ["chunk_key", "chunkKey"], "")
     metadata_chunk_text = metadata_value(
         metadata,
         [
@@ -554,8 +685,18 @@ def normalize_vector_hit(hit, resource_lookup=None):
         "",
     )
     chunk_text = load_chunk_text_from_oss(metadata) or metadata_chunk_text
-    title = title or markdown_frontmatter_value(chunk_text, "source_file")
+    title = (
+        usable_display_title(title_from_chunk_text(chunk_text))
+        or usable_display_title(metadata_title)
+        or first_usable_display_title(
+            metadata_value(metadata, ["source_url", "sourceUrl", "file_url", "url"], ""),
+            location,
+            chunk_key,
+            hit.get("key") or hit.get("id") or "",
+        )
+    )
     source_url = clean_source_url(metadata_value(metadata, ["source_url", "sourceUrl", "source_file", "sourceFile", "url", "file_url"], ""))
+    source_proxy_url = source_proxy_download_url(metadata)
     resource_url = ""
     if resource:
         if resource.get("storage_provider") == "oss" and resource.get("oss_bucket") and resource.get("oss_object_key"):
@@ -574,7 +715,8 @@ def normalize_vector_hit(hit, resource_lookup=None):
         "title": clean_title,
         "snippet": clean_snippet or "该片段缺少正文内容，请检查预处理入库字段。",
         "chunk_text": clean_snippet,
-        "source_url": source_url or resource_url,
+        "source_url": source_url or resource_url or source_proxy_url,
+        "download_url": resource_url or source_proxy_url or source_url,
         "category": metadata_value(metadata, ["category_name", "category"], (resource or {}).get("category", "")),
         "index": metadata_value(metadata, ["_vector_index", "index", "vector_index"], ""),
         "distance": distance,
@@ -596,7 +738,7 @@ def candidate_resource_names_from_hit(hit):
         metadata_value(metadata, ["source_file", "sourceFile", "title", "filename", "file_name", "file", "source"], ""),
         metadata_value(metadata, ["OSSVECTORS-EMBED-SRC-LOCATION"], ""),
         metadata_value(metadata, ["chunk_key", "chunkKey"], ""),
-        markdown_frontmatter_value(content, "source_file"),
+        title_from_chunk_text(content),
     ]:
         value = str(value or "").strip()
         if not value:
@@ -608,6 +750,8 @@ def candidate_resource_names_from_hit(hit):
             values.append(name)
         if path_value:
             values.append(path_value)
+        if value:
+            values.append(value)
     return [item for item in dict.fromkeys(values) if item]
 
 
@@ -652,8 +796,17 @@ def visible_resource_lookup_by_names(conn, user, raw_hits):
     args = []
     for name in names[:20]:
         basename = Path(name).name
-        conditions.append("(r.title = %s OR r.oss_object_key = %s OR r.oss_object_key LIKE %s OR r.stored_path LIKE %s)")
-        args.extend([basename, name, f"%{basename}", f"%{basename}"])
+        conditions.append(
+            "("
+            "r.title = %s OR r.title = %s "
+            "OR r.oss_object_key = %s OR r.oss_object_key LIKE %s OR r.oss_object_key LIKE %s "
+            "OR r.stored_path LIKE %s "
+            "OR %s LIKE CONCAT('%%', r.oss_object_key) "
+            "OR %s LIKE CONCAT('%%', r.title) "
+            "OR %s LIKE CONCAT('%%', r.oss_object_key, '%%')"
+            ")"
+        )
+        args.extend([basename, name, name, f"%{basename}", f"%{name}%", f"%{basename}", name, name, name])
     rows = conn.execute(
         f"""
         SELECT r.*, k.type AS knowledge_base_type, k.title AS knowledge_base_title
@@ -691,12 +844,15 @@ def build_rag_context(hits, max_chars=6000):
 
 
 def public_source_hit(hit):
+    chunk_text = hit.get("chunk_text") or hit.get("snippet") or "该片段缺少正文内容，请检查预处理入库字段。"
     return {
         "key": hit.get("key", ""),
         "resource_id": hit.get("resource_id", ""),
         "title": hit.get("title") or "未命名片段",
-        "snippet": hit.get("snippet") or hit.get("chunk_text") or "该片段缺少正文内容，请检查预处理入库字段。",
+        "snippet": chunk_text,
+        "chunk_text": chunk_text,
         "source_url": hit.get("source_url", ""),
+        "download_url": hit.get("download_url") or hit.get("source_url", ""),
         "category": hit.get("category", ""),
         "index": hit.get("index", ""),
         "score": hit.get("score"),
@@ -763,12 +919,93 @@ def create_rag_preprocess_task(kb_type, file_urls, resource_id=None, bucket_name
     return rag_request("/api/rag-preprocess", method="POST", payload=payload)
 
 
+def nested_value(data, paths, default=None):
+    for path in paths:
+        current = data
+        for key in path:
+            if not isinstance(current, dict) or key not in current:
+                current = None
+                break
+            current = current.get(key)
+        if current not in (None, ""):
+            return current
+    return default
+
+
+def int_usage_value(value):
+    if value in (None, ""):
+        return 0
+    if isinstance(value, (list, tuple, set)):
+        return len(value)
+    try:
+        return max(0, int(float(value)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def extract_embedding_usage(task):
+    if not isinstance(task, dict):
+        return {"tokens": 0, "chunks": 0, "model": ""}
+    result = {}
+    raw_result = task.get("result_json")
+    if isinstance(raw_result, str) and raw_result.strip():
+        try:
+            parsed_result = json.loads(raw_result)
+            if isinstance(parsed_result, dict):
+                result = parsed_result
+        except json.JSONDecodeError:
+            result = {}
+    elif isinstance(raw_result, dict):
+        result = raw_result
+
+    sources = [task, result]
+    token_paths = [
+        ("embedding_token_count",),
+        ("embedding_tokens",),
+        ("token_count",),
+        ("tokens",),
+        ("total_tokens",),
+        ("usage", "embedding_tokens"),
+        ("usage", "total_tokens"),
+        ("usage", "tokens"),
+        ("usage", "prompt_tokens"),
+        ("embedding", "usage", "total_tokens"),
+        ("embedding", "usage", "prompt_tokens"),
+        ("embedding", "tokens"),
+    ]
+    chunk_paths = [
+        ("embedding_chunk_count",),
+        ("chunk_count",),
+        ("chunks_count",),
+        ("chunks",),
+        ("usage", "chunk_count"),
+        ("embedding", "chunk_count"),
+    ]
+    model_paths = [
+        ("embedding_model",),
+        ("model",),
+        ("usage", "embedding_model"),
+        ("embedding", "model"),
+    ]
+    tokens = 0
+    chunks = 0
+    model = ""
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        tokens = tokens or int_usage_value(nested_value(source, token_paths))
+        chunks = chunks or int_usage_value(nested_value(source, chunk_paths))
+        model = model or str(nested_value(source, model_paths, "") or "").strip()
+    return {"tokens": tokens, "chunks": chunks, "model": model}
+
+
 def update_resource_from_rag_task(conn, resource_id, task):
     if not task:
         return
     rag_status = task.get("status") or "pending"
     status, status_text, progress = rag_status_payload(rag_status)
     summary = task.get("summary") or ""
+    usage = extract_embedding_usage(task)
     conn.execute(
         """
         UPDATE resources
@@ -779,6 +1016,9 @@ def update_resource_from_rag_task(conn, resource_id, task):
             rag_summary = %s,
             rag_result_json = %s,
             rag_error = %s,
+            embedding_token_count = CASE WHEN %s > 0 THEN %s ELSE embedding_token_count END,
+            embedding_chunk_count = CASE WHEN %s > 0 THEN %s ELSE embedding_chunk_count END,
+            embedding_model = COALESCE(NULLIF(%s, ''), embedding_model),
             updated_at = %s
         WHERE id = %s
         """,
@@ -790,6 +1030,11 @@ def update_resource_from_rag_task(conn, resource_id, task):
             summary,
             task.get("result_json") or "",
             task.get("error") or "",
+            usage["tokens"],
+            usage["tokens"],
+            usage["chunks"],
+            usage["chunks"],
+            usage["model"],
             now_text(),
             resource_id,
         ),
@@ -816,8 +1061,8 @@ def normalize_rag_webhook_payload(data):
             return None, "completed 回调的 error 必须为空"
         if summary is not None and not isinstance(summary, str):
             return None, "summary 必须为字符串或 null"
-        if result_json is not None and not isinstance(result_json, str):
-            return None, "result_json 必须为 JSON 字符串或 null"
+        if result_json is not None and not isinstance(result_json, (str, dict)):
+            return None, "result_json 必须为 JSON 字符串、对象或 null"
     if status == "failed":
         if not isinstance(error, str) or not error.strip():
             return None, "failed 回调必须包含 error"
@@ -826,11 +1071,15 @@ def normalize_rag_webhook_payload(data):
         if result_json is not None:
             return None, "failed 回调的 result_json 必须为 null"
 
+    usage = extract_embedding_usage(data)
     return {
         "status": status,
         "summary": summary or "",
-        "result_json": result_json or "",
+        "result_json": json.dumps(result_json, ensure_ascii=False) if isinstance(result_json, dict) else (result_json or ""),
         "error": error or "",
+        "embedding_token_count": usage["tokens"],
+        "embedding_chunk_count": usage["chunks"],
+        "embedding_model": usage["model"],
     }, ""
 
 
@@ -999,6 +1248,9 @@ def init_db():
               rag_summary VARCHAR(500),
               rag_result_json TEXT,
               rag_error TEXT,
+              embedding_token_count BIGINT NOT NULL DEFAULT 0,
+              embedding_chunk_count INT NOT NULL DEFAULT 0,
+              embedding_model VARCHAR(120),
               created_at VARCHAR(30) NOT NULL,
               updated_at VARCHAR(30) NOT NULL,
               FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id)
@@ -1062,6 +1314,9 @@ def init_db():
             ("rag_summary", "TEXT"),
             ("rag_result_json", "TEXT"),
             ("rag_error", "TEXT"),
+            ("embedding_token_count", "BIGINT NOT NULL DEFAULT 0"),
+            ("embedding_chunk_count", "INT NOT NULL DEFAULT 0"),
+            ("embedding_model", "VARCHAR(120)"),
         ]
         for column, column_type in resource_migrations:
             if column not in existing_resource_columns:
@@ -1292,7 +1547,7 @@ def public_user(user, include_token=False):
     if user is None:
         return None
     public = {
-        key: value
+        key: (float(value) if isinstance(value, decimal.Decimal) else value)
         for key, value in user.items()
         if key not in ("password_hash", "vector_index")
     }
@@ -1303,6 +1558,21 @@ def public_user(user, include_token=False):
 
 def public_users(users):
     return [public_user(user) for user in users]
+
+
+def public_admin_user_row(row):
+    item = public_user(row)
+    item["billing"] = {
+        "resource_count": int(row.get("resource_count") or 0),
+        "storage_mb": round(float(row.get("storage_mb") or 0), 2),
+        "indexed_count": int(row.get("indexed_count") or 0),
+        "indexing_count": int(row.get("indexing_count") or 0),
+        "failed_count": int(row.get("failed_count") or 0),
+        "embedding_token_count": int(row.get("embedding_token_count") or 0),
+        "call_count": int(row.get("call_count") or 0),
+        "last_activity": row.get("last_activity") or "",
+    }
+    return item
 
 
 def parse_target(target):
@@ -1472,7 +1742,8 @@ def dashboard_payload(user=None):
 
     today = datetime.date.today()
     trend = []
-    for offset in range(6, -1, -1):
+    trend_days = 15
+    for offset in range(trend_days - 1, -1, -1):
         day = today - datetime.timedelta(days=offset)
         day_text = day.strftime("%Y-%m-%d")
         count = sum(1 for row in resource_rows if str(row["created_at"] or "").startswith(day_text))
@@ -1480,8 +1751,8 @@ def dashboard_payload(user=None):
             "date": day.strftime("%m-%d"),
             "count": count,
         })
-    weekly_total = sum(item["count"] for item in trend)
-    daily_average = round(weekly_total / 7) if trend else 0
+    trend_total = sum(item["count"] for item in trend)
+    daily_average = round(trend_total / trend_days) if trend else 0
 
     return {
         "stats": {
@@ -1506,7 +1777,7 @@ def dashboard_payload(user=None):
             },
             "trend": {
                 "days": trend,
-                "total": weekly_total,
+                "total": trend_total,
                 "average": daily_average,
             },
         },
@@ -1576,6 +1847,8 @@ class AppHandler(BaseHTTPRequestHandler):
                 else:
                     users = []
             return self.send_json({"user": public_user(current_user), "users": public_users(users)})
+        if path == "/api/admin/users":
+            return self.admin_users(params)
         if path == "/api/knowledge-bases":
             with connect_db() as conn:
                 rows = [row_to_dict(row) for row in conn.execute("SELECT * FROM knowledge_bases ORDER BY id").fetchall()]
@@ -1586,6 +1859,8 @@ class AppHandler(BaseHTTPRequestHandler):
         resource_download_match = re.match(r"^/api/resources/(\d+)/download$", path)
         if resource_download_match:
             return self.download_resource(resource_download_match.group(1), params)
+        if path == "/api/source-file/download":
+            return self.download_source_file(params)
         if path == "/api/resources":
             return self.list_resources(params)
         if path == "/api/categories":
@@ -1623,6 +1898,9 @@ class AppHandler(BaseHTTPRequestHandler):
     def do_PUT(self):
         parsed = parse_target(self.path)
         params = urllib.parse.parse_qs(parsed.query)
+        user_match = re.match(r"^/api/users/(\d+)$", parsed.path)
+        if user_match:
+            return self.update_user(user_match.group(1), params)
         if parsed.path.startswith("/api/knowledge-bases/"):
             return self.update_knowledge_base(parsed.path.rsplit("/", 1)[-1], params)
         return self.send_json({"error": "接口不存在"}, 404)
@@ -1630,6 +1908,9 @@ class AppHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):
         parsed = parse_target(self.path)
         params = urllib.parse.parse_qs(parsed.query)
+        user_match = re.match(r"^/api/users/(\d+)$", parsed.path)
+        if user_match:
+            return self.delete_user(user_match.group(1), params)
         if parsed.path.startswith("/api/resources/"):
             resource_id = parsed.path.rsplit("/", 1)[-1]
             with connect_db() as conn:
@@ -1737,6 +2018,27 @@ class AppHandler(BaseHTTPRequestHandler):
         with file_path.open("rb") as handle:
             shutil.copyfileobj(handle, self.wfile)
 
+    def download_source_file(self, params):
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+        if not oss_enabled():
+            return self.send_json({"error": "OSS 未配置，无法下载源文件"}, 500)
+        bucket_name = str((params.get("bucket") or [""])[0] or "").strip()
+        object_key = str((params.get("key") or [""])[0] or "").strip().lstrip("/")
+        if not bucket_name or not object_key:
+            return self.send_json({"error": "缺少源文件 bucket 或 key"}, 400)
+        if ".." in object_key.split("/"):
+            return self.send_json({"error": "源文件 key 不合法"}, 400)
+        try:
+            signed_url = oss_bucket_client(bucket_name).sign_url("GET", object_key, OSS_DOWNLOAD_EXPIRES)
+        except Exception as exc:
+            return self.send_json({"error": f"源文件签名失败：{exc}"}, 500)
+        self.send_response(302)
+        self.send_header("Location", signed_url)
+        self.end_headers()
+
     def get_knowledge_base(self, kb_type, params):
         with connect_db() as conn:
             current_user = self.require_user(conn, params)
@@ -1790,6 +2092,140 @@ class AppHandler(BaseHTTPRequestHandler):
         with connect_db() as conn:
             rows = [row_to_dict(row) for row in conn.execute(sql, args).fetchall()]
         return self.send_json({"items": rows, "currentUser": public_user(current_user)})
+
+    def admin_users(self, params):
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            if not is_admin(current_user):
+                return self.send_json({"error": "仅管理员可以查看用户看板"}, 403)
+            rows = [
+                row_to_dict(row)
+                for row in conn.execute(
+                    """
+                    SELECT
+                      u.*,
+                      COUNT(DISTINCT r.id) AS resource_count,
+                      COALESCE(SUM(r.size_mb), 0) AS storage_mb,
+                      COALESCE(SUM(r.embedding_token_count), 0) AS embedding_token_count,
+                      SUM(CASE WHEN r.status = 'indexed' THEN 1 ELSE 0 END) AS indexed_count,
+                      SUM(CASE WHEN r.status = 'indexing' THEN 1 ELSE 0 END) AS indexing_count,
+                      SUM(CASE WHEN r.status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
+                      (
+                        SELECT COUNT(*)
+                        FROM operation_logs ol
+                        WHERE ol.user_name = u.name AND ol.action IN ('search', 'chat', 'rag_search')
+                      ) AS call_count,
+                      (
+                        SELECT MAX(ol.created_at)
+                        FROM operation_logs ol
+                        WHERE ol.user_name = u.name
+                      ) AS last_activity
+                    FROM users u
+                    LEFT JOIN resources r ON r.owner = u.name
+                    GROUP BY u.id
+                    ORDER BY u.account_type = 'admin' DESC, u.id ASC
+                    """
+                ).fetchall()
+            ]
+        totals = {
+            "users": len(rows),
+            "admins": sum(1 for row in rows if row.get("account_type") == "admin"),
+            "resources": sum(int(row.get("resource_count") or 0) for row in rows),
+            "storage_mb": round(sum(float(row.get("storage_mb") or 0) for row in rows), 2),
+            "embedding_token_count": sum(int(row.get("embedding_token_count") or 0) for row in rows),
+            "calls": sum(int(row.get("call_count") or 0) for row in rows),
+        }
+        return self.send_json({
+            "items": [public_admin_user_row(row) for row in rows],
+            "totals": totals,
+            "currentUser": public_user(current_user),
+        })
+
+    def update_user(self, user_id, params):
+        data = self.read_json()
+        name = str(data.get("name") or data.get("account") or "").strip()
+        role = str(data.get("role") or "").strip() or "普通用户"
+        status = str(data.get("status") or "正常").strip()
+        permission_scope = str(data.get("permission_scope") or data.get("permissionScope") or "仅本人上传").strip()
+        account_type = str(data.get("account_type") or data.get("accountType") or "user").strip()
+        password = str(data.get("password") or "")
+        if not valid_chinese_username(name):
+            return self.send_json({"error": "用户名必须为 2-20 个中文字符"}, 400)
+        if account_type not in {"admin", "user"}:
+            return self.send_json({"error": "账号类型不正确"}, 400)
+        if status not in {"正常", "停用"}:
+            return self.send_json({"error": "账号状态不正确"}, 400)
+        if password and not valid_user_password(password):
+            return self.send_json({"error": "密码必须为英文+数字组合，且至少 8 个字符"}, 400)
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            if not is_admin(current_user):
+                return self.send_json({"error": "仅管理员可以编辑用户"}, 403)
+            target = row_to_dict(conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone())
+            if target is None:
+                return self.send_json({"error": "用户不存在"}, 404)
+            duplicate = conn.execute(
+                "SELECT id FROM users WHERE name = %s AND id <> %s",
+                (name, user_id),
+            ).fetchone()
+            if duplicate:
+                return self.send_json({"error": "该用户名已存在"}, 409)
+            vector_bucket = default_vector_bucket_for_user({"name": name, "login_account": name})
+            login_account = str(data.get("login_account") or data.get("loginAccount") or target.get("login_account") or name).strip()
+            if password:
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET name = %s, role = %s, account_type = %s, login_account = %s,
+                        password_hash = %s, vector_bucket = %s, status = %s, permission_scope = %s
+                    WHERE id = %s
+                    """,
+                    (name, role, account_type, login_account, hash_password(password), vector_bucket, status, permission_scope, user_id),
+                )
+            else:
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET name = %s, role = %s, account_type = %s, login_account = %s,
+                        vector_bucket = %s, status = %s, permission_scope = %s
+                    WHERE id = %s
+                    """,
+                    (name, role, account_type, login_account, vector_bucket, status, permission_scope, user_id),
+                )
+            if target.get("name") != name:
+                conn.execute("UPDATE resources SET owner = %s WHERE owner = %s", (name, target["name"]))
+                conn.execute("UPDATE categories SET owner = %s WHERE owner = %s", (name, target["name"]))
+            user = row_to_dict(conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone())
+            log_operation(conn, current_user, "update_user", "user", user_id, name)
+        return self.send_json({"ok": True, "user": public_user(user)})
+
+    def delete_user(self, user_id, params):
+        with connect_db() as conn:
+            current_user = self.require_user(conn, params)
+            if current_user is None:
+                return
+            if not is_admin(current_user):
+                return self.send_json({"error": "仅管理员可以删除用户"}, 403)
+            target = row_to_dict(conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone())
+            if target is None:
+                return self.send_json({"error": "用户不存在"}, 404)
+            if str(target["id"]) == str(current_user["id"]):
+                return self.send_json({"error": "不能删除当前登录的管理员账号"}, 409)
+            if target.get("account_type") == "admin":
+                admin_count = int(conn.execute("SELECT COUNT(*) AS count FROM users WHERE account_type = 'admin'").fetchone()["count"] or 0)
+                if admin_count <= 1:
+                    return self.send_json({"error": "至少保留一个管理员账号"}, 409)
+            owned = int(conn.execute("SELECT COUNT(*) AS count FROM resources WHERE owner = %s", (target["name"],)).fetchone()["count"] or 0)
+            if owned:
+                return self.send_json({"error": "该用户仍有关联文件，暂不能删除"}, 409)
+            conn.execute("DELETE FROM categories WHERE owner = %s", (target["name"],))
+            conn.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            log_operation(conn, current_user, "delete_user", "user", user_id, target.get("name", ""))
+        return self.send_json({"ok": True})
 
     def search(self, params):
         query = params.get("q", [""])[0].strip()
@@ -1852,7 +2288,7 @@ class AppHandler(BaseHTTPRequestHandler):
             hits = []
             for raw_hit in raw_hits:
                 hit = normalize_vector_hit(raw_hit, resource_lookup)
-                if not hit.get("source_url"):
+                if needs_resource_resolution(hit):
                     for name in candidate_resource_names_from_hit(raw_hit):
                         resource = resource_name_lookup.get(name) or resource_name_lookup.get(Path(name).name)
                         if resource:
@@ -1906,7 +2342,7 @@ class AppHandler(BaseHTTPRequestHandler):
             hits = []
             for raw_hit in raw_hits:
                 hit = normalize_vector_hit(raw_hit, resource_lookup)
-                if not hit.get("source_url"):
+                if needs_resource_resolution(hit):
                     for name in candidate_resource_names_from_hit(raw_hit):
                         resource = resource_name_lookup.get(name) or resource_name_lookup.get(Path(name).name)
                         if resource:
@@ -1927,6 +2363,7 @@ class AppHandler(BaseHTTPRequestHandler):
                         "你是知识库中台的AI助手。请优先基于给定知识库片段回答；"
                         "如果片段不足以回答，请明确说明资料中没有足够依据。"
                         "回答要简洁，并在涉及资料结论时标注引用编号，如[1]。"
+                        "请使用自然语言段落回答，不要使用Markdown格式，不要使用项目符号、粗体符号或标题列表。"
                     ),
                 }
             ]
@@ -2201,6 +2638,9 @@ class AppHandler(BaseHTTPRequestHandler):
         rag_summary = ""
         rag_result_json = ""
         rag_error = ""
+        embedding_token_count = 0
+        embedding_chunk_count = 0
+        embedding_model = ""
         stored_path = str(target_path.relative_to(BASE_DIR))
 
         with connect_db() as conn:
@@ -2288,6 +2728,10 @@ class AppHandler(BaseHTTPRequestHandler):
                     rag_task_id = rag_task.get("task_id") or rag_task.get("id") or ""
                     rag_status = rag_task.get("status") or "pending"
                     rag_summary = rag_task.get("summary") or RAG_STATUS_TEXT.get(rag_status, "RAG任务已提交")
+                    rag_usage = extract_embedding_usage(rag_task)
+                    embedding_token_count = rag_usage["tokens"]
+                    embedding_chunk_count = rag_usage["chunks"]
+                    embedding_model = rag_usage["model"]
                     status, status_text, progress = rag_status_payload(rag_status)
                     conn.execute(
                         """
@@ -2299,6 +2743,9 @@ class AppHandler(BaseHTTPRequestHandler):
                             rag_status = %s,
                             rag_summary = %s,
                             rag_error = %s,
+                            embedding_token_count = CASE WHEN %s > 0 THEN %s ELSE embedding_token_count END,
+                            embedding_chunk_count = CASE WHEN %s > 0 THEN %s ELSE embedding_chunk_count END,
+                            embedding_model = COALESCE(NULLIF(%s, ''), embedding_model),
                             updated_at = %s
                         WHERE id = %s
                         """,
@@ -2310,6 +2757,11 @@ class AppHandler(BaseHTTPRequestHandler):
                             rag_status,
                             rag_summary,
                             "",
+                            rag_usage["tokens"],
+                            rag_usage["tokens"],
+                            rag_usage["chunks"],
+                            rag_usage["chunks"],
+                            rag_usage["model"],
                             now_text(),
                             resource_id,
                         ),
@@ -2359,6 +2811,9 @@ class AppHandler(BaseHTTPRequestHandler):
                     "rag_status": rag_status,
                     "rag_summary": rag_summary,
                     "rag_error": rag_error,
+                    "embedding_token_count": embedding_token_count,
+                    "embedding_chunk_count": embedding_chunk_count,
+                    "embedding_model": embedding_model,
                 },
             },
             201,

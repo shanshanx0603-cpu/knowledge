@@ -1,13 +1,70 @@
 :root {
   --app-sidebar-width: 190px;
-  --app-page-min-width: 1180px;
+  --app-page-min-width: 1120px;
   --app-header-height: clamp(48px, 8.8vh, 72px);
-  --app-gap: 16px;
+  --app-page-gap: clamp(14px, 1.35vw, 22px);
+  --app-page-pad-block: clamp(14px, 1.7vh, 20px);
+  --app-page-pad-inline-start: clamp(12px, 1.2vw, 16px);
+  --app-page-pad-inline-end: clamp(18px, 2vw, 28px);
+  --app-gap: var(--app-page-gap);
   --app-panel-radius: 10px;
+}
+
+html {
+  width: 100%;
+  min-width: 0;
+  scrollbar-gutter: stable;
+}
+
+body {
+  width: 100%;
+  min-width: 0;
+}
+
+body,
+input,
+button,
+select,
+textarea {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.page {
+  width: 100%;
+  max-width: 100%;
+}
+
+body > .page {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+header,
+.topbar {
+  min-width: 0;
+  grid-template-columns: minmax(132px, 170px) minmax(0, 1fr) minmax(128px, 150px);
+}
+
+.title {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace {
   grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
+  gap: var(--app-page-gap);
+  padding: var(--app-page-pad-block) var(--app-page-pad-inline-end) var(--app-page-pad-block) var(--app-page-pad-inline-start);
+  min-width: 0;
 }
 
 .side,
@@ -17,9 +74,22 @@
   border-radius: var(--app-panel-radius);
 }
 
+.side {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.side .nav {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
 .nav a,
 .upload {
   white-space: nowrap;
+  min-width: 0;
 }
 
 .side .upload {
@@ -57,6 +127,312 @@
   opacity: .72;
 }
 
+.user {
+  position: relative;
+}
+
+body .user {
+  min-width: 0;
+  max-width: 150px;
+  height: 38px;
+  padding: 4px 13px 4px 5px;
+  gap: 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+body .user #currentUserName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body .user .avatar {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+}
+
+body .user .chev {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-right-width: 1.8px;
+  border-bottom-width: 1.8px;
+}
+
+.user-popover {
+  position: fixed;
+  top: 76px;
+  right: 28px;
+  width: 310px;
+  padding: 18px;
+  border: 1px solid #dce7f6;
+  border-radius: 10px;
+  background: #fff;
+  color: #102a4d;
+  box-shadow: 0 22px 55px rgba(21, 51, 92, .18);
+  z-index: 1000;
+  display: none;
+}
+
+.user-popover.open {
+  display: block;
+}
+
+.user-popover::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 34px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-left: 1px solid #dce7f6;
+  border-top: 1px solid #dce7f6;
+  transform: rotate(45deg);
+}
+
+.user-popover h3 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  color: #0f2d55;
+}
+
+.user-popover label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #526781;
+}
+
+.user-popover input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d9e4f2;
+  border-radius: 7px;
+  outline: none;
+  color: #0f2d55;
+  background: #f8fbff;
+  font-size: 14px;
+}
+
+.user-popover input:focus {
+  border-color: #2478ff;
+  box-shadow: 0 0 0 3px rgba(36, 120, 255, .12);
+}
+
+.user-popover .popover-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.user-popover button,
+.user-popover a.profile-link {
+  height: 40px;
+  border-radius: 7px;
+  border: 0;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.user-popover .primary {
+  flex: 1;
+  color: #fff;
+  background: #126cff;
+}
+
+.user-popover .secondary,
+.user-popover a.profile-link {
+  color: #1f4d87;
+  background: #eef5ff;
+}
+
+.user-popover .danger {
+  color: #c53737;
+  background: #fff0f0;
+}
+
+.user-popover .message {
+  min-height: 18px;
+  margin-top: 10px;
+  color: #d84848;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.user-popover .message.success {
+  color: #0d936d;
+}
+
+.main,
+.admin-main,
+.debug-shell,
+.debug-main,
+.result-area,
+.upload-panel,
+.summary,
+.cards,
+.toolbar,
+.filters,
+.panel,
+.table-card,
+.table-wrap,
+.source-list,
+.category-grid {
+  min-width: 0;
+}
+
+.toolbar,
+.filters,
+.panel-head,
+.hero,
+.top-actions,
+.actions,
+.selectors {
+  min-width: 0;
+}
+
+.crumb,
+.section-head h2,
+.section-head span,
+.panel-title,
+.panel-head h2,
+.panel-head p,
+.sub,
+.category-name,
+.drop-title,
+.form-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toolbar {
+  gap: clamp(12px, 1.3vw, 20px);
+}
+
+.search input,
+.selectors input,
+.selectors select,
+.category-select,
+.add-form input,
+.search {
+  min-width: 0;
+}
+
+.table-card,
+.table-wrap,
+.panel {
+  scrollbar-width: thin;
+}
+
+.table-wrap {
+  scrollbar-gutter: stable both-edges;
+}
+
+.upload-panel {
+  grid-template-columns: minmax(300px, .9fr) minmax(340px, 1.1fr);
+  gap: clamp(14px, 1.35vw, 18px);
+}
+
+.dropzone {
+  min-height: clamp(360px, 54vh, 440px);
+}
+
+.summary {
+  grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(190px, 240px);
+  padding: clamp(18px, 2.1vh, 24px) clamp(18px, 1.9vw, 26px);
+}
+
+.summary-art {
+  min-width: 0;
+  transform-origin: center;
+}
+
+.metric-card {
+  padding-inline: clamp(8px, .75vw, 14px);
+}
+
+.metric-value {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.debug-shell {
+  grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
+  gap: clamp(12px, 1.2vw, 16px);
+}
+
+.source-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.category-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.admin-layout {
+  min-width: 0;
+  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
+  gap: var(--app-page-gap);
+  padding: var(--app-page-pad-block) var(--app-page-pad-inline-end) var(--app-page-pad-block) var(--app-page-pad-inline-start);
+}
+
+.admin-main {
+  padding-right: 2px;
+}
+
+.admin-main > .stats {
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.grid-form {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.user-table {
+  min-width: 980px;
+}
+
+.profile-panel {
+  max-width: min(760px, 100%);
+}
+
+.user-popover .profile-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f7fbff;
+  border: 1px solid #e1ebf8;
+  font-size: 14px;
+}
+
+.user-popover .profile-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #5f728d;
+}
+
+.user-popover .profile-row strong {
+  color: #102a4d;
+  text-align: right;
+}
+
 .is-loading::after {
   content: "";
   width: 13px;
@@ -77,11 +453,97 @@
 @media (min-width: 1800px) {
   :root {
     --app-sidebar-width: 190px;
-    --app-gap: 18px;
+    --app-page-gap: 18px;
   }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1240px) {
+  :root {
+    --app-sidebar-width: 176px;
+    --app-page-gap: 14px;
+    --app-page-pad-inline-end: 18px;
+  }
+
+  header,
+  .topbar {
+    grid-template-columns: 148px minmax(0, 1fr) 132px;
+  }
+
+  .brand-logo {
+    width: 126px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .title::before,
+  .title::after {
+    width: 42px;
+  }
+
+  .nav a,
+  .upload {
+    min-height: 52px;
+    gap: 10px;
+    padding-inline: 12px;
+    font-size: 14px;
+  }
+
+  .side {
+    padding: 16px 10px;
+  }
+
+  .side .upload {
+    min-height: 54px;
+    padding-inline: 12px;
+    font-size: 15px;
+  }
+
+  .main {
+    gap: 14px;
+  }
+
+  .toolbar {
+    grid-template-columns: minmax(180px, 1fr) minmax(300px, 44vw);
+  }
+
+  .summary {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(150px, 190px);
+  }
+
+  .summary-art {
+    transform: scale(.88);
+  }
+
+  .cards {
+    gap: 14px;
+  }
+
+  .panel {
+    padding-inline: clamp(16px, 1.4vw, 22px);
+  }
+
+  .debug-shell {
+    grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  }
+
+  .source-list {
+    gap: 10px;
+    padding-inline: 14px;
+  }
+
+  .upload-panel {
+    grid-template-columns: minmax(280px, .85fr) minmax(320px, 1.15fr);
+    padding: 18px;
+  }
+
+  .dropzone {
+    padding: 22px;
+  }
+}
+
+@media (max-width: 1120px) {
   body {
     overflow: auto;
   }

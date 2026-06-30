@@ -8,109 +8,165 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      min-height: 100vh;
-      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
       color: #17233d;
-      background: #eef4fb;
+      background:
+        radial-gradient(circle at 9% 0%, rgba(31, 126, 255, 0.08), transparent 25%),
+        radial-gradient(circle at 88% 10%, rgba(37, 197, 218, 0.08), transparent 28%),
+        linear-gradient(145deg, #f8fbff 0%, #eef6ff 52%, #f9fcff 100%);
     }
-    .page { min-height: 100vh; padding: 18px; }
-    header {
-      height: var(--app-header-height);
+    .page {
+      width: 100%;
+      height: 100%;
       display: grid;
-      grid-template-columns: 190px 1fr 180px;
+      grid-template-rows: clamp(48px, 8.8vh, 72px) minmax(0, 1fr);
+    }
+    header {
+      display: grid;
+      grid-template-columns: 170px 1fr 150px;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 16px;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(72, 111, 172, 0.12);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(18px);
     }
-    .brand { display: flex; align-items: center; text-decoration: none; }
-    .brand-logo { width: 158px; height: auto; display: block; }
+    .brand { display: flex; align-items: center; color: #071a3d; text-decoration: none; }
+    .brand-logo { width: 136px; height: 36px; object-fit: contain; display: block; }
     .title {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 13px;
       margin: 0;
-      font-size: 26px;
-      font-weight: 700;
-      color: #113b73;
+      font-size: 21px;
+      font-weight: 900;
+      color: #092253;
       letter-spacing: 0;
-      text-align: center;
     }
+    .title::before,
+    .title::after {
+      content: "";
+      width: 54px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(45, 117, 255, 0.35));
+    }
+    .title::after {
+      background: linear-gradient(90deg, rgba(45, 117, 255, 0.35), transparent);
+    }
+    .title span { position: relative; }
+    .title span::before,
+    .title span::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #2f8bff;
+      box-shadow: 7px 0 0 #7bb7ff;
+    }
+    .title span::before { left: -34px; }
+    .title span::after { right: -24px; }
     .user {
       justify-self: end;
-      height: 42px;
-      min-width: 142px;
-      padding: 0 12px;
-      border-radius: 8px;
-      background: #fff;
       display: inline-flex;
       align-items: center;
-      gap: 9px;
-      color: #284263;
+      gap: 8px;
+      height: 29px;
+      padding: 3px 10px 3px 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(49, 96, 166, 0.12);
+      box-shadow: 0 5px 18px rgba(44, 85, 147, 0.10);
+      color: #4d5d78;
       text-decoration: none;
-      box-shadow: 0 8px 24px rgba(49, 86, 128, .12);
+      font-size: 9px;
+      font-weight: 700;
     }
     .avatar {
-      width: 26px;
-      height: 26px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #4aa6ff, #1f6fd6);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 32%, #ffdfc6 0 22%, transparent 23%),
+        radial-gradient(circle at 50% 86%, #20365c 0 35%, transparent 36%),
+        linear-gradient(#e8f0ff, #c4d8ff);
     }
     .chev {
-      width: 7px;
-      height: 7px;
-      border-right: 2px solid #7489a6;
-      border-bottom: 2px solid #7489a6;
-      transform: rotate(45deg);
-      margin-left: auto;
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid #7c8ba3;
+      border-bottom: 1.5px solid #7c8ba3;
+      transform: rotate(45deg) translateY(-2px);
     }
     .workspace {
+      min-height: 0;
       display: grid;
       grid-template-columns: 190px minmax(0, 1fr);
-      gap: 16px;
-      min-height: calc(100vh - 106px);
+      gap: 22px;
+      padding: 20px 28px 22px 16px;
     }
     .side {
-      background: #fff;
-      padding: 18px 12px;
-      box-shadow: 0 16px 36px rgba(51, 85, 128, .12);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      padding: 20px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(81, 130, 207, 0.14);
+      box-shadow: 0 18px 48px rgba(38, 95, 180, 0.08);
     }
-    .nav { display: grid; gap: 8px; }
+    .nav {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
     .nav a,
     .upload {
-      height: 44px;
-      padding: 0 12px;
+      min-height: 56px;
+      padding: 0 14px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      color: #536b8d;
+      gap: 12px;
+      color: #233b70;
       text-decoration: none;
       font-size: 15px;
+      font-weight: 800;
       border-radius: 8px;
+      white-space: nowrap;
     }
     .nav a svg,
-    .upload svg { width: 19px; height: 19px; flex: 0 0 auto; }
+    .upload svg { width: 23px; height: 23px; flex: 0 0 auto; }
     .nav a.active {
       color: #0069ff;
-      background: linear-gradient(90deg, rgba(0, 111, 255, .1), rgba(0, 111, 255, .02));
-      box-shadow: inset 3px 0 0 #0b72ff;
+      background: linear-gradient(90deg, rgba(0, 111, 255, .14), rgba(0, 111, 255, .04));
+      box-shadow: inset 3px 0 0 #0b72ff, 0 10px 24px rgba(33, 116, 255, .10);
     }
     .main {
       min-width: 0;
+      min-height: 0;
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      gap: 14px;
+      grid-template-rows: 44px minmax(0, 1fr);
+      gap: 16px;
     }
     .toolbar {
-      height: 54px;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 18px;
-      background: #fff;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(78, 126, 202, 0.14);
       border-radius: 10px;
-      box-shadow: 0 12px 28px rgba(51, 85, 128, .1);
+      box-shadow: 0 18px 48px rgba(38, 95, 180, 0.08);
     }
-    .crumb { color: #7890ad; font-size: 14px; }
+    .crumb { color: #28416f; font-size: 14px; font-weight: 700; }
     .selectors { display: flex; align-items: center; gap: 10px; }
     .selectors select,
     .selectors input {
@@ -122,12 +178,20 @@
       background: #f8fbff;
       outline: none;
     }
-    .chat-shell {
+    .debug-shell {
       min-height: 0;
       display: grid;
-      grid-template-columns: 220px minmax(520px, 1fr) 420px;
+      grid-template-columns: 250px minmax(0, 1fr);
       gap: 16px;
     }
+    .debug-main {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 14px;
+    }
+    .query-panel,
     .sessions,
     .conversation,
     .sources {
@@ -135,6 +199,51 @@
       background: #fff;
       border-radius: 10px;
       box-shadow: 0 16px 36px rgba(51, 85, 128, .12);
+    }
+    .query-panel {
+      padding: 14px 16px;
+      display: grid;
+      overflow: hidden;
+    }
+    .query-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px;
+      align-items: center;
+      gap: 10px;
+    }
+    .query-main textarea {
+      width: 100%;
+      height: 54px;
+      min-height: 54px;
+      max-height: 90px;
+      resize: none;
+      border: 1px solid #d9e5f3;
+      border-radius: 12px;
+      padding: 15px 18px;
+      outline: none;
+      font: inherit;
+      color: #1c3656;
+      background: #fbfdff;
+      line-height: 1.45;
+    }
+    .query-main textarea:focus {
+      border-color: #2478ff;
+      box-shadow: 0 0 0 3px rgba(36, 120, 255, .12);
+    }
+    .query-main button,
+    .new-session {
+      border: 0;
+      color: #fff;
+      background: #0b72ff;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .query-main button {
+      height: 54px;
+      border-radius: 12px;
+      font-size: 14px;
+      box-shadow: 0 10px 22px rgba(11, 114, 255, .18);
     }
     .sessions {
       padding: 14px;
@@ -151,21 +260,16 @@
     }
     .session-top h2 {
       margin: 0;
-      font-size: 16px;
       color: #163b68;
+      font-size: 16px;
+      font-weight: 900;
       white-space: nowrap;
     }
     .new-session {
       height: 32px;
       padding: 0 11px;
-      border: 0;
       border-radius: 7px;
-      color: #fff;
-      background: #0b72ff;
       font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
     }
     .session-list {
       min-height: 0;
@@ -202,113 +306,187 @@
       font-size: 12px;
       white-space: nowrap;
     }
+    .result-area {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(120px, .54fr) minmax(0, 1.46fr);
+      gap: 14px;
+    }
     .conversation {
       display: grid;
-      grid-template-rows: minmax(0, 1fr) auto;
+      grid-template-rows: auto minmax(0, 1fr);
       overflow: hidden;
+    }
+    .section-head {
+      min-height: 50px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #e4edf7;
+    }
+    .section-head h2 {
+      margin: 0;
+      color: #163b68;
+      font-size: 17px;
+      font-weight: 900;
+    }
+    .section-head span {
+      color: #7b8fa8;
+      font-size: 12px;
+      font-weight: 800;
     }
     .messages {
       min-height: 0;
       overflow: auto;
-      padding: 22px;
+      padding: 12px 18px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
     }
-    .message-row { display: flex; }
-    .message-row.user { justify-content: flex-end; }
+    .message-row {
+      display: flex;
+      width: 100%;
+      clear: both;
+    }
+    .message-row.msg-user { justify-content: flex-end; }
     .bubble {
-      max-width: min(720px, 76%);
-      padding: 13px 15px;
-      border-radius: 8px;
-      line-height: 1.65;
+      max-width: min(920px, 82%);
+      min-width: 0;
+      padding: 12px 15px;
+      border-radius: 10px;
+      line-height: 1.58;
       font-size: 15px;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+      word-break: break-word;
+      position: relative;
     }
-    .assistant .bubble {
-      background: #f4f8fc;
+    .message-row.msg-user .bubble {
+      max-width: min(720px, 72%);
+      text-align: left;
+    }
+    .message-row.msg-assistant .bubble {
+      max-width: min(980px, 86%);
+    }
+    .message-row.msg-assistant .bubble {
+      background: linear-gradient(180deg, #f8fbff, #f1f6fc);
       color: #223b5b;
       border: 1px solid #e1ebf6;
+      box-shadow: 0 8px 18px rgba(58, 102, 158, .08);
     }
-    .user .bubble {
+    .message-row.msg-user .bubble {
       color: #fff;
-      background: #176bdb;
-    }
-    .composer {
-      padding: 14px;
-      border-top: 1px solid #e4edf7;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 92px;
-      gap: 10px;
-    }
-    .composer textarea {
-      min-height: 48px;
-      max-height: 130px;
-      resize: vertical;
-      border: 1px solid #d9e5f3;
-      border-radius: 8px;
-      padding: 12px;
-      outline: none;
-      font: inherit;
-      line-height: 1.5;
-      color: #1c3656;
-      background: #fbfdff;
-    }
-    .composer button {
-      height: 48px;
-      border: 0;
-      border-radius: 8px;
-      color: #fff;
-      background: #0b72ff;
-      font-weight: 700;
-      cursor: pointer;
+      background: linear-gradient(145deg, #1978ff, #0a63d8);
+      box-shadow: 0 10px 22px rgba(11, 114, 255, .18);
     }
     .sources {
-      padding: 18px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+    }
+    .debug-main .source-list {
+      min-height: 0;
+      height: 100%;
       overflow: auto;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      grid-template-rows: repeat(2, minmax(260px, 1fr)) !important;
+      grid-auto-flow: row;
+      grid-auto-rows: minmax(260px, auto);
+      align-content: stretch;
+      gap: 14px;
+      padding: 16px 18px 18px;
     }
-    .sources h2 {
-      margin: 0 0 12px;
-      font-size: 16px;
-      color: #163b68;
-    }
-    .source-list { display: grid; gap: 12px; }
     .source-item {
-      border: 1px solid #e2ebf6;
-      border-radius: 8px;
-      padding: 13px;
-      background: #f9fbfe;
+      min-height: 260px;
+      border: 1px solid rgba(82, 132, 202, .16);
+      border-radius: 10px;
+      padding: 12px;
+      background: linear-gradient(180deg, #fbfdff, #f6f9fe);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 22px rgba(45, 83, 132, .07);
     }
-    .source-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #214464;
-      margin-bottom: 8px;
-      overflow-wrap: anywhere;
-    }
-    .source-meta {
-      display: flex;
-      flex-wrap: wrap;
+    .source-match {
+      min-height: 32px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
       gap: 8px;
-      margin-bottom: 8px;
-      color: #7890ad;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .source-link {
-      color: #0b72ff;
-      text-decoration: none;
-    }
-    .source-link:hover { text-decoration: underline; }
-    .source-text {
-      max-height: 150px;
-      overflow: auto;
-      color: #5c718d;
+      color: #173a66;
       font-size: 13px;
-      line-height: 1.65;
+      font-weight: 900;
+    }
+    @media (max-width: 1380px) {
+      .source-match {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+      .source-download {
+        justify-self: start;
+      }
+    }
+    .source-match-main {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .source-index {
+      color: #173a66;
+      font-size: 14px;
+      font-weight: 950;
+    }
+    .source-match strong {
+      color: #0f74f2;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+    .source-download {
+      height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 7px;
+      color: #fff;
+      background: linear-gradient(145deg, #1978ff, #0a63d8);
+      box-shadow: 0 8px 16px rgba(11, 114, 255, .16);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .source-download:hover {
+      filter: brightness(1.04);
+    }
+    .source-download.disabled {
+      color: #7f93ad;
+      background: #edf3fa;
+      box-shadow: none;
+      pointer-events: none;
+    }
+    .source-text {
+      min-height: 0;
+      max-height: none;
+      overflow: auto;
+      margin: 0;
+      padding: 12px;
+      border: 1px solid rgba(72, 119, 184, .14);
+      border-radius: 8px;
+      color: #243e61;
+      background: #fff;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+      overscroll-behavior: contain;
     }
     .empty {
       color: #8094ad;
@@ -316,12 +494,15 @@
       line-height: 1.6;
     }
     @media (max-width: 1180px) {
-      body { overflow: auto; }
+      body { overflow: hidden; }
       .page { min-width: 1180px; min-height: 760px; }
     }
     @media (min-width: 1600px) {
-      .chat-shell {
-        grid-template-columns: 230px minmax(760px, 1fr) 520px;
+      .debug-shell {
+        grid-template-columns: 270px minmax(0, 1fr);
+      }
+      .result-area {
+        grid-template-rows: minmax(130px, .52fr) minmax(0, 1.48fr);
       }
     }
   </style>
@@ -361,7 +542,7 @@
           </div>
         </div>
 
-        <section class="chat-shell">
+        <section class="debug-shell">
           <aside class="sessions">
             <div class="session-top">
               <h2>历史记录</h2>
@@ -370,24 +551,32 @@
             <div class="session-list" id="sessionList"></div>
           </aside>
 
-          <section class="conversation">
-            <div class="messages" id="messages">
-              <div class="message-row assistant">
-                <div class="bubble">你好，我可以基于知识库内容回答问题。你可以问我课程适合对象、方案内容、实施流程等。</div>
-              </div>
-            </div>
-            <form class="composer" id="chatForm">
-              <textarea id="messageInput" placeholder="输入问题，按 Enter 发送，Shift + Enter 换行"></textarea>
-              <button id="sendButton" type="submit">发送</button>
-            </form>
-          </section>
+          <section class="debug-main">
+            <section class="query-panel">
+              <form class="query-main" id="chatForm">
+                <textarea id="messageInput" placeholder="输入问题，按 Enter 发送，Shift + Enter 换行"></textarea>
+                <button id="sendButton" type="submit">发送</button>
+              </form>
+            </section>
 
-          <aside class="sources">
-            <h2>引用来源</h2>
-            <div class="source-list" id="sourceList">
-              <div class="empty">发送问题后，这里会显示召回的知识库片段。</div>
-            </div>
-          </aside>
+            <section class="result-area">
+              <section class="conversation">
+                <div class="section-head">
+                  <h2>回答结果</h2>
+                </div>
+                <div class="messages" id="messages"></div>
+              </section>
+
+              <section class="sources">
+                <div class="section-head">
+                  <h2>召回内容</h2>
+                </div>
+                <div class="source-list" id="sourceList">
+                  <div class="empty">发送问题后，这里会显示召回的知识库片段。</div>
+                </div>
+              </section>
+            </section>
+          </section>
         </section>
       </section>
     </section>
@@ -404,7 +593,6 @@
 	    const categorySelect = document.getElementById("categorySelect");
 	    const sessionList = document.getElementById("sessionList");
 	    const newSessionButton = document.getElementById("newSessionButton");
-	    const welcomeText = "你好，我可以基于知识库内容回答问题。你可以问我课程适合对象、方案内容、实施流程等。";
 	    let currentUserKey = localStorage.getItem("currentUser") || "guest";
 	    let sessions = [];
 	    let activeSessionId = "";
@@ -474,8 +662,12 @@
 	    function renderActiveSession() {
 	      const session = getActiveSession();
 	      messagesNode.innerHTML = "";
-	      appendMessage("assistant", welcomeText, false);
-	      (session?.messages || []).forEach((item) => appendMessage(item.role, item.content, false));
+	      const messages = session?.messages || [];
+	      if (!messages.length) {
+	        messagesNode.innerHTML = '<div class="empty">输入问题后，这里会以一问一答的形式展示调试结果。</div>';
+	      } else {
+	        messages.forEach((item) => appendMessage(item.role, item.content, false));
+	      }
 	      renderSources(session?.sources || []);
 	      messagesNode.scrollTop = messagesNode.scrollHeight;
 	    }
@@ -528,12 +720,24 @@
       }
     }
 
+    function plainAnswerText(value) {
+      return String(value || "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+        .replace(/__([^_\n]+)__/g, "$1")
+        .replace(/^\s*[-*]\s+/gm, "")
+        .replace(/^\s*\d+[.)、]\s+/gm, "")
+        .replace(/`([^`\n]+)`/g, "$1")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
 	    function appendMessage(role, content, shouldScroll = true) {
 	      const row = document.createElement("div");
-	      row.className = `message-row ${role}`;
+	      row.className = `message-row msg-${role}`;
 	      const bubble = document.createElement("div");
 	      bubble.className = "bubble";
-	      bubble.textContent = content;
+	      bubble.textContent = role === "assistant" ? plainAnswerText(content) : content;
 	      row.appendChild(bubble);
 	      messagesNode.appendChild(row);
 	      if (shouldScroll) messagesNode.scrollTop = messagesNode.scrollHeight;
@@ -546,37 +750,51 @@
         sourceList.innerHTML = '<div class="empty">本次没有召回到来源片段。</div>';
         return;
       }
-      sources.forEach((source, index) => {
+      function relevanceValue(source) {
+        const distance = Number(source.distance);
+        if (Number.isFinite(distance)) {
+          const percent = Math.max(0, Math.min(100, (1 - distance) * 100));
+          return `${percent.toFixed(1)}%`;
+        }
+        const score = Number(source.score);
+        if (Number.isFinite(score)) {
+          const normalized = score <= 1 ? score * 100 : score;
+          return `${Math.max(0, Math.min(100, normalized)).toFixed(1)}%`;
+        }
+        return "-";
+      }
+      function chunkDownloadHref(content) {
+        const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+        return URL.createObjectURL(blob);
+      }
+      sources.slice(0, 6).forEach((source, index) => {
         const item = document.createElement("div");
         item.className = "source-item";
-        const title = document.createElement("div");
-        title.className = "source-title";
-        title.textContent = `[${index + 1}] ${source.title || "未命名片段"}`;
-        const meta = document.createElement("div");
-        meta.className = "source-meta";
-        const metaItems = [];
-        if (source.category) metaItems.push(`分类：${source.category}`);
-        if (source.index) metaItems.push(`索引：${source.index}`);
-        if (source.distance !== null && source.distance !== undefined) metaItems.push(`距离：${Number(source.distance).toFixed(4)}`);
-        if (source.score !== null && source.score !== undefined) metaItems.push(`分数：${Number(source.score).toFixed(4)}`);
-        meta.textContent = metaItems.join("  ");
-        const text = document.createElement("div");
-        text.className = "source-text";
-        text.textContent = source.snippet || source.chunk_text || "该片段缺少正文内容，请检查预处理入库字段。";
-        item.append(title);
-        if (metaItems.length) item.appendChild(meta);
-        item.appendChild(text);
-        if (source.source_url) {
+        const chunkContent = source.chunk_text || source.snippet || "该片段缺少正文内容，请检查预处理入库字段。";
+        const match = document.createElement("div");
+        match.className = "source-match";
+        const main = document.createElement("div");
+        main.className = "source-match-main";
+        main.innerHTML = `<span class="source-index">[${index + 1}]</span><span>匹配度</span><strong>${relevanceValue(source)}</strong>`;
+        match.appendChild(main);
+        if (chunkContent && !chunkContent.includes("该片段缺少正文内容")) {
           const link = document.createElement("a");
-          link.className = "source-link";
-          link.href = source.source_url.startsWith("/api/")
-            ? KnowledgeApp.apiUrl(source.source_url)
-            : source.source_url;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = "查看原文件";
-          item.appendChild(link);
+          link.className = "source-download";
+          link.href = chunkDownloadHref(chunkContent);
+          link.download = `chunk-${index + 1}.md`;
+          link.textContent = "下载文本";
+          match.appendChild(link);
+        } else {
+          const disabled = document.createElement("span");
+          disabled.className = "source-download disabled";
+          disabled.textContent = "暂无文本";
+          match.appendChild(disabled);
         }
+        const text = document.createElement("pre");
+        text.className = "source-text";
+        text.textContent = chunkContent;
+        item.appendChild(match);
+        item.appendChild(text);
         sourceList.appendChild(item);
       });
     }
@@ -610,7 +828,7 @@
 	        });
 	        const data = await response.json();
 	        if (!response.ok) throw new Error(data.error || "知识库调试失败");
-	        pending.textContent = data.answer || "没有生成回答。";
+	        pending.textContent = plainAnswerText(data.answer || "没有生成回答。");
 	        session.messages.push({ role: "assistant", content: pending.textContent });
 	        session.sources = data.sources || [];
 	        session.updatedAt = new Date().toISOString();
