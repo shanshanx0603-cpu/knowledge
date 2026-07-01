@@ -229,24 +229,156 @@
       padding: 30px;
     }
     .profile-main {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: clamp(28px, 5vh, 56px) 0;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .profile-hero {
+      display: none;
+    }
+    .profile-layout {
+      width: min(100%, 360px);
+      min-height: auto;
+      padding: 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      align-items: start;
+      justify-content: center;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    .identity-card {
+      min-height: auto;
+      padding: 0;
+      display: grid;
       align-content: start;
+      justify-items: center;
+      gap: 18px;
+      text-align: center;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    .profile-avatar {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: linear-gradient(145deg, #1978ff, #0a63d8);
+      box-shadow: 0 10px 24px rgba(18, 108, 255, .18);
+      font-size: 24px;
+      font-weight: 950;
+    }
+    .profile-name {
+      width: 100%;
+      display: grid;
+      justify-items: start;
+      gap: 0;
+      text-align: left;
+    }
+    .profile-name strong {
+      color: #092253;
+      font-size: 26px;
+      font-weight: 950;
+      line-height: 1.15;
+      order: -1;
+      margin-bottom: 30px;
+    }
+    .profile-name span {
+      display: none;
+    }
+    .profile-summary {
+      display: none;
+    }
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #617293;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .summary-line strong {
+      color: #18365f;
+      overflow-wrap: anywhere;
+      text-align: right;
     }
     .profile-panel {
-      max-width: 760px;
       width: 100%;
+      min-width: 0;
+      min-height: auto;
+      padding: 0;
+      align-self: start;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
     }
-    .profile-card { display: grid; gap: 12px; margin-top: 18px; }
+    .profile-panel h2 {
+      display: none;
+    }
+    .profile-card {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 28px;
+      margin-top: 28px;
+    }
     .info-row {
       display: grid;
-      grid-template-columns: 110px minmax(0, 1fr);
-      gap: 14px;
-      padding: 14px;
-      border-radius: 10px;
-      background: #f8fbff;
-      border: 1px solid #e0ebf8;
+      gap: 10px;
+      min-height: auto;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      border: 0;
     }
-    .info-label { color: #607293; font-weight: 900; }
-    .info-value { color: #092253; font-weight: 950; overflow-wrap: anywhere; }
+    .info-label { color: #5b6472; font-size: 14px; font-weight: 500; }
+    .info-value { color: #111827; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+    .config-panel {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 28px;
+    }
+    .config-card {
+      min-height: auto;
+      padding: 0;
+      border-radius: 0;
+      border: 0;
+      background: transparent;
+    }
+    .config-card span {
+      color: #5b6472;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .config-card strong {
+      display: block;
+      margin-top: 10px;
+      color: #111827;
+      font-size: 15px;
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+    .profile-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 42px;
+    }
+    .profile-actions .ghost-btn,
+    .profile-actions .danger-btn {
+      height: 40px;
+      min-width: 92px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
     .hidden { display: none !important; }
     @media (max-width: 1180px) {
       .page { min-width: 1180px; min-height: 760px; }
@@ -364,22 +496,42 @@
       </aside>
 
       <section class="admin-main profile-main">
-        <section class="panel hero">
+        <section class="panel hero profile-hero">
           <div>
             <h1>个人信息</h1>
-            <p class="sub">查看当前登录账号、权限范围和知识库配置。</p>
+            <p class="sub">查看当前登录账号、权限范围和知识库配置，确认上传与调试使用的账号环境。</p>
           </div>
         </section>
 
-        <section class="panel profile-panel">
-          <h2>账号资料</h2>
-          <div class="profile-card">
-            <div class="info-row"><span class="info-label">用户名</span><span class="info-value" id="profileName">-</span></div>
-            <div class="info-row"><span class="info-label">账号类型</span><span class="info-value" id="profileType">-</span></div>
-            <div class="info-row"><span class="info-label">权限范围</span><span class="info-value" id="profileScope">-</span></div>
-            <div class="info-row"><span class="info-label">向量 Bucket</span><span class="info-value" id="profileBucket">-</span></div>
-            <div class="info-row"><span class="info-label">最近登录</span><span class="info-value" id="profileLastLogin">-</span></div>
-          </div>
+        <section class="profile-layout">
+          <section class="panel identity-card">
+            <div class="profile-name">
+              <strong>个人信息</strong>
+            </div>
+            <div class="profile-avatar" id="profileInitial">-</div>
+          </section>
+
+          <section class="panel profile-panel">
+            <h2>账号资料</h2>
+            <div class="profile-card">
+              <div class="info-row"><span class="info-label">用户名</span><span class="info-value" id="profileNameDetail">-</span></div>
+              <div class="info-row"><span class="info-label">登录账号</span><span class="info-value" id="profileAccount">-</span></div>
+              <div class="info-row"><span class="info-label">账号类型</span><span class="info-value" id="profileType">-</span></div>
+              <div class="info-row"><span class="info-label">账号状态</span><span class="info-value" id="profileStatus">-</span></div>
+              <div class="info-row"><span class="info-label">权限范围</span><span class="info-value" id="profileScope">-</span></div>
+              <div class="info-row"><span class="info-label">向量 Bucket</span><span class="info-value" id="profileBucket">-</span></div>
+              <div class="info-row"><span class="info-label">最近登录</span><span class="info-value" id="profileLastLogin">-</span></div>
+            </div>
+            <div class="config-panel">
+              <div class="config-card"><span>可访问范围</span><strong id="profileAccessText">-</strong></div>
+              <div class="config-card"><span>上传权限</span><strong id="profileUploadText">-</strong></div>
+              <div class="config-card"><span>知识库调试</span><strong id="profileDebugText">可使用</strong></div>
+            </div>
+            <div class="profile-actions">
+              <a class="ghost-btn" href="overview.html">进入首页</a>
+              <button class="danger-btn" id="profileLogoutButton" type="button">退出登录</button>
+            </div>
+          </section>
         </section>
       </section>
     </section>
@@ -407,6 +559,7 @@
     const passwordInput = document.getElementById("password");
     const loginButton = document.getElementById("loginButton");
     const logoutButton = document.getElementById("logoutButton");
+    const profileLogoutButton = document.getElementById("profileLogoutButton");
     const adminLogoutButton = document.getElementById("adminLogoutButton");
     const userRows = document.getElementById("userRows");
     const adminStats = document.getElementById("adminStats");
@@ -440,11 +593,21 @@
       hideAll();
       profileView.classList.remove("hidden");
       KnowledgeApp.renderNav();
-      document.getElementById("profileName").textContent = user.name || user.login_account || "-";
-      document.getElementById("profileType").textContent = user.account_type === "admin" ? "管理员" : "普通用户";
-      document.getElementById("profileScope").textContent = user.permission_scope || (user.account_type === "admin" ? "全部知识库" : "仅本人上传");
+      const name = user.name || user.login_account || "-";
+      const isAdmin = user.account_type === "admin";
+      const typeText = isAdmin ? "管理员" : "普通用户";
+      const scope = user.permission_scope || (isAdmin ? "全部知识库" : "仅本人上传");
+      document.getElementById("profileInitial").textContent = name === "-" ? "-" : name.slice(0, 1);
+      document.getElementById("profileNameDetail").textContent = name;
+      document.getElementById("profileType").textContent = typeText;
+      document.getElementById("profileAccount").textContent = user.login_account || name;
+      document.getElementById("profileStatus").textContent = user.status || "正常";
+      document.getElementById("profileScope").textContent = scope;
       document.getElementById("profileBucket").textContent = user.vector_bucket || "-";
       document.getElementById("profileLastLogin").textContent = user.last_login || "-";
+      document.getElementById("profileAccessText").textContent = isAdmin ? "全部知识库" : "本人文件";
+      document.getElementById("profileUploadText").textContent = isAdmin ? "无需上传" : "允许上传";
+      document.getElementById("profileDebugText").textContent = user.vector_bucket ? "已配置" : "待配置";
     }
 
     function formatMb(value) {
@@ -587,7 +750,7 @@
       message.textContent = "";
       try {
         KnowledgeApp.setButtonLoading(loginButton, true, "登录中");
-        const response = await fetch("/api/login", {
+        const response = await fetch(KnowledgeApp.apiUrl("/api/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ account: accountInput.value.trim(), password: passwordInput.value })
@@ -614,6 +777,7 @@
     }
 
     logoutButton.addEventListener("click", logout);
+    profileLogoutButton.addEventListener("click", logout);
     adminLogoutButton.addEventListener("click", logout);
     document.getElementById("refreshButton").addEventListener("click", loadAdminUsers);
     userSearch.addEventListener("input", renderUserRows);

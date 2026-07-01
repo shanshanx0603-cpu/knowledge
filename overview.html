@@ -552,9 +552,8 @@
     .type-body {
       min-height: 0;
       display: grid;
-      grid-template-rows: minmax(0, 1fr) auto;
-      align-content: stretch;
-      gap: clamp(10px, 1.2vh, 14px);
+      grid-template-rows: minmax(0, 1fr);
+      align-content: center;
       align-self: stretch;
       overflow: hidden;
     }
@@ -579,50 +578,6 @@
 
     .type-panel .donut-center span {
       font-size: 10px;
-    }
-
-    .type-bars {
-      min-height: 0;
-      display: grid;
-      align-content: center;
-      gap: 12px;
-      padding: 14px 16px;
-      height: clamp(112px, 13vh, 132px);
-      border-radius: 10px;
-      border: 1px solid rgba(74, 123, 205, .10);
-      background: linear-gradient(180deg, rgba(248, 251, 255, .88), rgba(243, 248, 255, .66));
-      overflow: hidden;
-    }
-
-    .type-bar-row {
-      min-width: 0;
-      display: grid;
-      grid-template-columns: 42px minmax(0, 1fr) 46px;
-      align-items: center;
-      gap: 10px;
-      color: #253f6d;
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .type-bar-row > span:first-child,
-    .type-bar-row > span:last-child {
-      white-space: nowrap;
-    }
-
-    .type-bar-track {
-      height: 7px;
-      border-radius: 999px;
-      background: #e7eef9;
-      overflow: hidden;
-    }
-
-    .type-bar-track span {
-      display: block;
-      width: 0;
-      height: 100%;
-      border-radius: inherit;
-      background: var(--c, #1378ff);
     }
 
     .dot {
@@ -1219,11 +1174,6 @@
                   <div class="legend-row"><span class="dot" style="--c:#8467ff"></span><span class="legend-label"><span>图片</span><small id="imageLegend">1,284 张</small></span><strong id="imagePercent">12.8%</strong></div>
                 </div>
               </div>
-              <div class="type-bars">
-                <div class="type-bar-row"><span>文档</span><div class="type-bar-track"><span id="docBar" style="--c:#1378ff"></span></div><span id="docBarPercent">84.0%</span></div>
-                <div class="type-bar-row"><span>视频</span><div class="type-bar-track"><span id="videoBar" style="--c:#20c79b"></span></div><span id="videoBarPercent">3.2%</span></div>
-                <div class="type-bar-row"><span>图片</span><div class="type-bar-track"><span id="imageBar" style="--c:#8467ff"></span></div><span id="imageBarPercent">12.8%</span></div>
-              </div>
             </div>
             <div class="panel-foot"><span>总数量 <strong id="typeFootTotal">10,072</strong></span><span>总存储 <strong id="typeFootStorage">481.4 GB</strong></span></div>
           </article>
@@ -1430,12 +1380,6 @@
       document.getElementById("docPercent").textContent = `${docPercent.toFixed(1)}%`;
       document.getElementById("videoPercent").textContent = `${videoPercent.toFixed(1)}%`;
       document.getElementById("imagePercent").textContent = `${imagePercent.toFixed(1)}%`;
-      document.getElementById("docBarPercent").textContent = `${docPercent.toFixed(1)}%`;
-      document.getElementById("videoBarPercent").textContent = `${videoPercent.toFixed(1)}%`;
-      document.getElementById("imageBarPercent").textContent = `${imagePercent.toFixed(1)}%`;
-      document.getElementById("docBar").style.width = `${docPercent}%`;
-      document.getElementById("videoBar").style.width = `${videoPercent}%`;
-      document.getElementById("imageBar").style.width = `${imagePercent}%`;
       document.getElementById("typeDonut").style.setProperty("--a", `${docPercent}%`);
       document.getElementById("typeDonut").style.setProperty("--b", `${docPercent + videoPercent}%`);
 

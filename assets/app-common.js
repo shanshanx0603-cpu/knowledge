@@ -201,7 +201,7 @@
       message.textContent = "";
       try {
         setButtonLoading(button, true, "登录中");
-        const response = await fetch("/api/login", {
+        const response = await fetch(KnowledgeApp.apiUrl("/api/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ account, password })
